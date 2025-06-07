@@ -5,10 +5,14 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'ShopeeLife App',
-  description: 'ShopeeLife app deployed via Vercel.',
+  description: 'ShopeeLife web app',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <head />

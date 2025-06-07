@@ -1,0 +1,1 @@
+// Main ShopeeLife app page (placeholder)

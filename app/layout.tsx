@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Office Simulator Game",
-  description: "A fun office simulation game where you earn ShopeeCoins and level up!",
+  description: "A fun office simulation game - no login required!",
     generator: 'v0.dev'
 }
 

@@ -13,9 +13,9 @@ interface OfficeTabProps {
   onClaimQuestReward: (questId: string) => void
   dailyQuests: DailyQuest[]
   currentWeather: WeatherCondition
-  isWorking: boolean // New prop
-  workingTaskId: string | null // New prop
-  workProgress: number // New prop
+  isWorking: boolean
+  workingTaskId: string | null
+  workProgress: number
 }
 
 export function OfficeTab({
@@ -36,9 +36,9 @@ export function OfficeTab({
   const allQuestsClaimed = dailyQuests.every((q) => q.isClaimed)
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="h-[calc(100vh-140px)] flex flex-col p-4 space-y-4">
       {/* Daily Quests Section */}
-      <Card>
+      <Card className="flex-shrink-0">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             Daily Quests
@@ -48,7 +48,7 @@ export function OfficeTab({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ScrollArea className="h-auto max-h-[200px] pr-4">
+          <ScrollArea className="h-[200px] pr-4">
             {dailyQuests.length === 0 ? (
               <p className="text-center text-gray-500 dark:text-gray-400">No daily quests available.</p>
             ) : (
@@ -101,12 +101,12 @@ export function OfficeTab({
       </Card>
 
       {/* Current Tasks Section */}
-      <Card>
+      <Card className="flex-1 min-h-0">
         <CardHeader>
           <CardTitle>Current Tasks</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[calc(100vh-500px)] pr-4">
+        <CardContent className="h-full p-0">
+          <ScrollArea className="h-full p-4">
             {tasks.length === 0 ? (
               <p className="text-center text-gray-500 dark:text-gray-400">No tasks available.</p>
             ) : (

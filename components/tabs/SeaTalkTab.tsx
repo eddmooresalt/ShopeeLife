@@ -38,16 +38,24 @@ export function SeaTalkTab({ gameState, onSendMessage }: SeaTalkTabProps) {
   }, [gameState.seaTalkMessages])
 
   return (
-    <div className="p-4 space-y-4 h-full flex flex-col">
-      <Card className="flex-1 flex flex-col">
-        <CardHeader>
-          <CardTitle>SeaTalk Chat</CardTitle>
+    <div className="h-[calc(100vh-140px)] flex flex-col p-4">
+      <Card className="flex-1 flex flex-col min-h-0">
+        <CardHeader className="flex-shrink-0 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-t-lg">
+          <CardTitle className="flex items-center space-x-2">
+            <span className="text-2xl">💬</span>
+            <span>SeaTalk Chat</span>
+          </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col p-4 pt-0">
-          <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-3">
+        <CardContent className="flex-1 flex flex-col p-0 min-h-0">
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-3 min-h-[400px]">
               {gameState.seaTalkMessages.length === 0 ? (
-                <p className="text-center text-gray-500 dark:text-gray-400">No messages yet. Start a conversation!</p>
+                <div className="flex items-center justify-center h-[400px]">
+                  <div className="text-center">
+                    <div className="text-6xl mb-4">💬</div>
+                    <p className="text-gray-500 dark:text-gray-400">No messages yet. Start a conversation!</p>
+                  </div>
+                </div>
               ) : (
                 gameState.seaTalkMessages.map((message: SeaTalkMessage) => (
                   <div
@@ -55,17 +63,32 @@ export function SeaTalkTab({ gameState, onSendMessage }: SeaTalkTabProps) {
                     className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[70%] p-3 rounded-lg ${
+                      className={`max-w-[70%] p-3 rounded-lg shadow-md ${
                         message.sender === "user"
-                          ? "bg-orange-500 text-white rounded-br-none"
-                          : "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-50 rounded-bl-none"
+                          ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-br-none"
+                          : "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-50 rounded-bl-none border border-gray-200 dark:border-gray-600"
                       }`}
                     >
-                      <div className="font-semibold text-sm mb-1">
-                        {message.sender === "user" ? "You 👤" : message.sender}
+                      <div className="font-semibold text-sm mb-1 flex items-center space-x-2">
+                        <span>{message.sender === "user" ? "You" : message.sender}</span>
+                        <span className="text-lg">
+                          {message.sender === "user"
+                            ? "👤"
+                            : message.sender.includes("HR")
+                              ? "🤖"
+                              : message.sender.includes("TeamLead")
+                                ? "👨‍💼"
+                                : message.sender.includes("Dev")
+                                  ? "👩‍💻"
+                                  : message.sender.includes("Marketing")
+                                    ? "📈"
+                                    : message.sender.includes("Intern")
+                                      ? "🎓"
+                                      : "👥"}
+                        </span>
                       </div>
-                      <p className="text-sm">{message.content}</p>
-                      <div className="text-xs text-right mt-1 opacity-75">
+                      <p className="text-sm leading-relaxed">{message.content}</p>
+                      <div className="text-xs text-right mt-2 opacity-75">
                         {formatGameTime(message.timestamp, true)}
                       </div>
                     </div>
@@ -75,18 +98,24 @@ export function SeaTalkTab({ gameState, onSendMessage }: SeaTalkTabProps) {
               <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
-          <div className="flex mt-4 space-x-2">
-            <Input
-              placeholder="Type a message..."
-              value={messageInput}
-              onChange={(e) => setMessageInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              className="flex-1"
-            />
-            <Button onClick={handleSend} disabled={!messageInput.trim()}>
-              <Send className="w-5 h-5" />
-              <span className="sr-only">Send message</span>
-            </Button>
+          <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+            <div className="flex space-x-2">
+              <Input
+                placeholder="Type a message..."
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="flex-1"
+              />
+              <Button
+                onClick={handleSend}
+                disabled={!messageInput.trim()}
+                className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+              >
+                <Send className="w-5 h-5" />
+                <span className="sr-only">Send message</span>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

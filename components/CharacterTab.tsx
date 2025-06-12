@@ -1,13 +1,17 @@
 import type React from "react"
-import { Zap, Brain, Users } from "react-feather"
+import { Zap, Brain, Heart } from "react-feather" // Changed Users to Heart for Burnout
 
 interface CharacterTabProps {
   energy: number
   focus: number
-  social: number
+  burnout: number // Changed social to burnout
 }
 
-const CharacterTab: React.FC<CharacterTabProps> = ({ energy, focus, social }) => {
+const CharacterTab: React.FC<CharacterTabProps> = ({ energy, focus, burnout }) => {
+  // Calculate burnout display: lower burnout is better, so 0 burnout means 100% "well-being"
+  const burnoutDisplay = 100 - burnout
+  const burnoutColor = burnout > 75 ? "bg-red-500" : burnout > 50 ? "bg-orange-500" : "bg-green-500"
+
   return (
     <div>
       {/* Stats Section */}
@@ -67,25 +71,25 @@ const CharacterTab: React.FC<CharacterTabProps> = ({ energy, focus, social }) =>
           <div className="flex flex-col">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center">
-                <Users className="w-5 h-5 text-green-500 mr-2" />
-                <span className="font-medium">Social</span>
+                <Heart className="w-5 h-5 text-red-500 mr-2" /> {/* Changed icon to Heart */}
+                <span className="font-medium">Burnout</span>
               </div>
-              <span className="font-medium">{social}/100</span>
+              <span className="font-medium">{burnout}/100</span>
             </div>
             <div className="relative h-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
               <div
-                className="absolute top-0 left-0 h-full bg-green-500 transition-all duration-300"
-                style={{ width: `${social}%` }}
+                className={`absolute top-0 left-0 h-full ${burnoutColor} transition-all duration-300`}
+                style={{ width: `${burnoutDisplay}%` }} // Invert for display: lower burnout = fuller bar
               >
-                {social > 15 && (
+                {burnoutDisplay > 15 && (
                   <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
-                    {social}%
+                    {burnoutDisplay}%
                   </span>
                 )}
               </div>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Social represents your interactions with colleagues. Improve it by using SeaTalk and attending events.
+              Burnout increases with overwork and stress. Reduce it with rest and positive events.
             </p>
           </div>
         </div>

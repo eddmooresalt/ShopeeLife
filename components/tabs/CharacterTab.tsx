@@ -1,20 +1,40 @@
+"use client"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Input } from "@/components/ui/input" // Import Input
+import { Button } from "@/components/ui/button" // Import Button
 import type { GameState } from "@/types/game"
-import { Flame, Zap, TrendingUp, AlertTriangle } from "lucide-react"
+import { Flame, Zap, TrendingUp, AlertTriangle, Edit, Save } from "lucide-react" // Added Edit, Save icons
+import { useState } from "react" // Import useState
+import { calculatePlayerGrade, getLevelRank } from "@/utils/gameUtils" // Import getLevelRank and calculatePlayerGrade
 
 interface CharacterTabProps {
   gameState: GameState
+  onUpdatePlayerName: (newName: string) => void // New prop for updating player name
 }
 
-export function CharacterTab({ gameState }: CharacterTabProps) {
-  const { exp, level, stats, wardrobe } = gameState
+export function CharacterTab({ gameState, onUpdatePlayerName }: CharacterTabProps) {
+  const { exp, level, stats, wardrobe, playerName } = gameState
   const { energy, productivity, burnout } = stats
+
+  const [editingName, setEditingName] = useState(false)
+  const [newName, setNewName] = useState(playerName)
 
   // Placeholder for level up logic (e.g., EXP needed for next level)
   const expToNextLevel = level * 100
   const expPercentage = (exp / expToNextLevel) * 100
+
+  const playerGrade = calculatePlayerGrade(productivity, burnout) // Calculate grade
+  const levelRank = getLevelRank(level) // Get level rank
+
+  const handleSaveName = () => {
+    if (newName.trim() && newName !== playerName) {
+      onUpdatePlayerName(newName.trim())
+    }
+    setEditingName(false)
+  }
 
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col">
@@ -22,7 +42,7 @@ export function CharacterTab({ gameState }: CharacterTabProps) {
         <div className="p-4 space-y-4 pb-24">
           <Card className="shadow-lg">
             <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-lg">
-              <CardTitle className="flex items-center space-x-2">
+              <CardTitle className="flex items-center space-x-2 text-xl md:text-2xl">
                 <span className="text-2xl">👤</span>
                 <span>Your Character</span>
               </CardTitle>
@@ -36,7 +56,29 @@ export function CharacterTab({ gameState }: CharacterTabProps) {
                     <span className="absolute top-0 left-0 text-5xl -translate-x-1/4 -translate-y-1/4">🍊</span>
                   )}
                 </div>
-                <h2 className="text-2xl font-bold">You (Level {level})</h2>
+                <div className="flex items-center space-x-2">
+                  {editingName ? (
+                    <Input
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      onBlur={handleSaveName}
+                      onKeyPress={(e) => e.key === "Enter" && handleSaveName()}
+                      className="text-2xl font-bold text-center"
+                    />
+                  ) : (
+                    <h2 className="text-2xl font-bold">
+                      {playerName} (Level {level})
+                    </h2>
+                  )}
+                  <Button variant="ghost" size="icon" onClick={() => setEditingName(!editingName)}>
+                    {editingName ? <Save className="w-5 h-5" /> : <Edit className="w-5 h-5" />}
+                    <span className="sr-only">{editingName ? "Save Name" : "Edit Name"}</span>
+                  </Button>
+                </div>
+                <p className="text-lg text-gray-600 dark:text-gray-400">
+                  Rank: <span className="font-semibold">{levelRank}</span> | Grade:{" "}
+                  <span className="font-semibold">{playerGrade}</span>
+                </p>
               </div>
 
               {/* Stats Section */}

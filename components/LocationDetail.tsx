@@ -20,6 +20,8 @@ import { GymLocation } from "./locations/GymLocation"
 import { PantryLocation } from "./locations/PantryLocation"
 import { HRPortalLocation } from "./locations/HRPortalLocation"
 import { ITHelpdeskLocation } from "./locations/ITHelpdeskLocation"
+import { ToiletLocation } from "./locations/ToiletLocation" // New import
+import { SmokingAreaLocation } from "./locations/SmokingAreaLocation" // New import
 import { TabType } from "@/types/game"
 
 interface LocationDetailProps {
@@ -33,6 +35,7 @@ interface LocationDetailProps {
   onClaimQuestReward: (questId: string) => void
   onPortalAction: (portalId: string, actionType: string) => void
   onLocationAction: (locationId: string, actionId: string) => void
+  setActiveTab: (tab: TabType) => void // Added setActiveTab
 }
 
 const LocationTabContent: Record<TabType, React.ComponentType<any>> = {
@@ -54,6 +57,8 @@ const CustomLocationComponents: Record<string, React.ComponentType<any>> = {
   pantry: PantryLocation,
   "hr-portal": HRPortalLocation,
   "it-helpdesk": ITHelpdeskLocation,
+  toilet: ToiletLocation, // New custom location
+  "smoking-area": SmokingAreaLocation, // New custom location
 }
 
 export function LocationDetail({
@@ -67,6 +72,7 @@ export function LocationDetail({
   onClaimQuestReward,
   onPortalAction,
   onLocationAction,
+  setActiveTab, // Destructure setActiveTab
 }: LocationDetailProps) {
   // Check if this location has a custom component
   const CustomLocationComponent = CustomLocationComponents[location.id]
@@ -80,8 +86,8 @@ export function LocationDetail({
             <ArrowLeft className="h-5 w-5" />
             <span className="sr-only">Back to Navigation</span>
           </Button>
-          <CardTitle className="text-xl font-bold flex items-center space-x-2">
-            <span className="text-3xl">{location.emoji}</span>
+          <CardTitle className="text-lg font-bold md:text-xl flex items-center space-x-2">
+            <span className="text-2xl md:text-3xl">{location.emoji}</span>
             <span>{location.name}</span>
           </CardTitle>
           <div className="w-10" /> {/* Spacer to balance back button */}
@@ -108,6 +114,7 @@ export function LocationDetail({
             onPortalAction={onPortalAction}
             dailyQuests={gameState.dailyQuests}
             currentWeather={gameState.currentWeather}
+            setActiveTab={setActiveTab} // Pass setActiveTab
           />
         ) : (
           <Card className="border-0 shadow-lg">

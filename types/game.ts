@@ -1,3 +1,4 @@
+import type React from "react"
 export enum TabType {
   Office = "office",
   Tasks = "tasks",
@@ -30,6 +31,7 @@ export interface Task {
   rewardCoins: number
   energyCost: number
   isCompleted: boolean
+  burnoutEffect?: number // New: Burnout effect on completion (positive values increase burnout)
 }
 
 export interface LunchLocation {
@@ -56,10 +58,17 @@ export interface ShopItem {
   effect?: {
     energy?: number
     productivity?: number
-    burnout?: number
+    burnout?: number // Burnout effect (negative values reduce burnout)
     workEfficiency?: number // e.g., 0.1 for 10% boost
+    exp?: number // Added exp effect for consumables
+    shopeeCoins?: number // Added shopeeCoins effect for consumables
   }
   isBought: boolean
+}
+
+export interface ConsumableInventoryItem {
+  itemId: string
+  quantity: number
 }
 
 export interface BottomNavigationTab {
@@ -85,7 +94,7 @@ export interface RandomEventChoice {
     shopeeCoins?: number
     energy?: number
     productivity?: number
-    burnout?: number
+    burnout?: number // Burnout effect (negative values reduce burnout)
   }
 }
 
@@ -93,6 +102,7 @@ export interface RandomEvent {
   id: string
   title: string
   description: string
+  emoji: string // Added emoji field for contextual display
   choices: RandomEventChoice[]
 }
 
@@ -153,13 +163,14 @@ export interface GameState {
   stats: {
     energy: number
     productivity: number
-    burnout: number
+    burnout: number // Burnout stat (lower is better)
   }
   tasks: Task[]
   lunchLocations: LunchLocation[]
   lunchItems: LunchItem[]
   shopItems: ShopItem[]
   wardrobe: string[] // Array of item IDs in wardrobe
+  consumablesInventory: ConsumableInventoryItem[] // Changed to track quantity
   hasEatenLunch: boolean
   lunchItemEatenId: string | null
   seaTalkMessages: SeaTalkMessage[]
@@ -168,4 +179,32 @@ export interface GameState {
   hasClaimedDailyBonus: boolean // To prevent claiming bonus multiple times per day
   hasShownLunchReminder: boolean // To prevent showing lunch reminder multiple times per day
   currentWeather: WeatherCondition
+  playerName: string // New: Player's customizable name
+}
+
+export interface PortalActionEffect {
+  exp?: number
+  shopeeCoins?: number
+  energy?: number
+  productivity?: number
+  burnout?: number
+}
+
+export interface PortalAction {
+  id: string
+  name: string
+  description: string
+  effect: PortalActionEffect
+  cost: number
+  duration: number // Duration in seconds for the progress bar
+}
+
+export interface PortalCategory {
+  id: string
+  name: string
+  emoji: string
+  icon: React.ElementType
+  description: string
+  cooldown: number // in game minutes
+  actions: PortalAction[]
 }

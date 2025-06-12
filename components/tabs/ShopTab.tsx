@@ -13,7 +13,7 @@ interface ShopTabProps {
 }
 
 export function ShopTab({ gameState, onBuyItem }: ShopTabProps) {
-  const { shopItems, shopeeCoins } = gameState
+  const { shopItems, shopeeCoins, consumablesInventory } = gameState
 
   const getItemRarity = (price: number) => {
     if (price >= 200) return { label: "Legendary", color: "bg-purple-500", icon: "✨" }
@@ -29,6 +29,13 @@ export function ShopTab({ gameState, onBuyItem }: ShopTabProps) {
     if (effect?.workEfficiency) return <Shield className="w-4 h-4 text-purple-500" />
     return <Star className="w-4 h-4 text-gray-500" />
   }
+
+  // Sort shop items: Marlboro first, then by price
+  const sortedShopItems = [...shopItems].sort((a, b) => {
+    if (a.id === "marlboro-cigarettes") return -1 // Marlboro always first
+    if (b.id === "marlboro-cigarettes") return 1 // Marlboro always first
+    return a.price - b.price // Then sort by price
+  })
 
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col p-4">
@@ -47,7 +54,7 @@ export function ShopTab({ gameState, onBuyItem }: ShopTabProps) {
         </CardHeader>
         <CardContent className="h-full p-0">
           <ScrollArea className="h-full p-4 pb-24">
-            {shopItems.length === 0 ? (
+            {sortedShopItems.length === 0 ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                   <div className="text-6xl mb-4">🛒</div>
@@ -55,14 +62,18 @@ export function ShopTab({ gameState, onBuyItem }: ShopTabProps) {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {shopItems.map((item: ShopItem) => {
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {sortedShopItems.map((item: ShopItem) => {
                   const rarity = getItemRarity(item.price)
+                  const isConsumable = item.type === "consumable"
+                  const ownedConsumable = consumablesInventory.find((c) => c.itemId === item.id)
+                  const isBought = item.isBought || (isConsumable && ownedConsumable && ownedConsumable.quantity > 0)
+
                   return (
                     <Card
                       key={item.id}
                       className={`relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl ${
-                        item.isBought
+                        isBought
                           ? "bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-300"
                           : "bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-700 hover:from-purple-50 hover:to-pink-50"
                       }`}
@@ -75,13 +86,18 @@ export function ShopTab({ gameState, onBuyItem }: ShopTabProps) {
                         <span>{rarity.label}</span>
                       </div>
 
-                      {/* Owned Badge */}
-                      {item.isBought && (
+                      {/* Owned/Quantity Badge */}
+                      {isConsumable && ownedConsumable && ownedConsumable.quantity > 0 ? (
+                        <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full flex items-center space-x-1">
+                          <span>📦</span>
+                          <span>Qty: {ownedConsumable.quantity}</span>
+                        </div>
+                      ) : item.isBought ? (
                         <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center space-x-1">
                           <span>✅</span>
                           <span>Owned</span>
                         </div>
-                      )}
+                      ) : null}
 
                       <CardContent className="p-6 text-center">
                         <div className="text-6xl mb-4">{item.emoji}</div>
@@ -119,21 +135,14 @@ export function ShopTab({ gameState, onBuyItem }: ShopTabProps) {
                           <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{item.price} SC</div>
                           <Button
                             onClick={() => onBuyItem(item.id)}
-                            disabled={item.isBought || shopeeCoins < item.price}
+                            disabled={shopeeCoins < item.price && !isConsumable} // Only disable if not enough SC for non-consumables
                             className={`w-full text-lg font-semibold py-3 ${
-                              item.isBought
-                                ? "bg-green-500 hover:bg-green-600"
-                                : shopeeCoins < item.price
-                                  ? "bg-gray-400"
-                                  : "bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600"
+                              shopeeCoins < item.price
+                                ? "bg-gray-400"
+                                : "bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600"
                             }`}
                           >
-                            {item.isBought ? (
-                              <div className="flex items-center space-x-2">
-                                <span>✅</span>
-                                <span>Owned</span>
-                              </div>
-                            ) : shopeeCoins < item.price ? (
+                            {shopeeCoins < item.price ? (
                               <div className="flex items-center space-x-2">
                                 <span>💸</span>
                                 <span>Not Enough SC</span>

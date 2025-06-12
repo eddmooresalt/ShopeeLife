@@ -8,6 +8,9 @@ import {
   type WeatherCondition,
   type SeaTalkMessageTemplate,
   type SeaTalkMessage,
+  type LocationType, // Added LocationType for clarity in gameData usage
+  type ShopItem, // Added ShopItem for clarity in gameData usage
+  type RandomEvent, // Added RandomEvent for clarity in gameData usage
 } from "@/types/game"
 import { initialGameState } from "@/data/gameData"
 
@@ -61,6 +64,11 @@ export const loadGame = (): GameState | undefined => {
       lunchItems: Array.isArray(loadedState.lunchItems) ? loadedState.lunchItems : initialGameState.lunchItems,
       shopItems: Array.isArray(loadedState.shopItems) ? loadedState.shopItems : initialGameState.shopItems,
       wardrobe: Array.isArray(loadedState.wardrobe) ? loadedState.wardrobe : [],
+      playerName: loadedState.playerName || initialGameState.playerName, // Initialize playerName
+      // Ensure consumablesInventory is correctly initialized
+      consumablesInventory: Array.isArray(loadedState.consumablesInventory)
+        ? loadedState.consumablesInventory
+        : initialGameState.consumablesInventory,
     }
 
     return mergedState
@@ -162,33 +170,31 @@ export const calculateLunchProgress = (
   return { updatedState, internalThought }
 }
 
-// Format game time (e.g., 540 minutes -> 09:00 AM)
-export const formatGameTime = (totalMinutes: number, includeSeconds = false): string => {
-  const minutesInDay = 24 * 60
-  const currentDayMinutes = totalMinutes % minutesInDay
-
-  const hours = Math.floor(currentDayMinutes / 60)
-  const minutes = Math.floor(currentDayMinutes % 60)
-  const seconds = Math.floor((totalMinutes * 1000) % 60) // Assuming 1 game minute = 1 real second
-
-  const ampm = hours >= 12 ? "PM" : "AM"
-  const displayHours = hours % 12 === 0 ? 12 : hours % 12
-  const displayMinutes = minutes.toString().padStart(2, "0")
-  const displaySeconds = seconds.toString().padStart(2, "0")
-
-  if (includeSeconds) {
-    return `${displayHours}:${displayMinutes}:${displaySeconds} ${ampm}`
-  }
-  return `${displayHours}:${displayMinutes} ${ampm}`
-}
-
 // Generate daily quests
-export const generateDailyQuests = (day: number, gameData: any): DailyQuest[] => {
+export const generateDailyQuests = (
+  day: number,
+  gameData: {
+    tasks: Task[]
+    locations: LocationType[]
+    lunchItems: LunchItem[]
+    shopItems: ShopItem[]
+    seaTalkMessages: SeaTalkMessageTemplate[]
+    randomEvents: RandomEvent[]
+  },
+): DailyQuest[] => {
   const quests: DailyQuest[] = []
-  const availableTasks = gameData.tasks.filter((t: Task) => !t.isCompleted)
-  const availableLocations = gameData.locations
-  const availableLunchItems = gameData.lunchItems
-  const availableShopItems = gameData.shopItems.filter((item: any) => !item.isBought)
+
+  // Defensive checks to ensure properties are arrays
+  const tasks = Array.isArray(gameData.tasks) ? gameData.tasks : []
+  const locations = Array.isArray(gameData.locations) ? gameData.locations : []
+  const lunchItems = Array.isArray(gameData.lunchItems) ? gameData.lunchItems : []
+  const shopItems = Array.isArray(gameData.shopItems) ? gameData.shopItems : []
+
+  const availableTasks = tasks.filter((t: Task) => !t.isCompleted)
+  const availableLocations = locations
+  const availableLunchItems = lunchItems
+  const availableShopItems = shopItems.filter((item: ShopItem) => !item.isBought) // Explicitly type item
+
   const statNames: (keyof GameState["stats"])[] = ["energy", "productivity", "burnout"]
 
   // Helper to pick a random item from an array
@@ -386,4 +392,132 @@ export const generateSeaTalkMessage = (templates: SeaTalkMessageTemplate[]): Sea
     content: template.content,
     timestamp: Date.now(), // Use real timestamp for auto-scroll
   }
+}
+
+/**
+ * Calculate the current game day based on game time
+ * @param gameTime Current game time in minutes
+ * @returns The current game day (starting from day 1)
+ */
+export function getGameDay(gameTime: number): number {
+  // Each day is 24 hours = 1440 minutes
+  const dayLength = 24 * 60
+  // Add 1 because days start at 1, not 0
+  return Math.floor(gameTime / dayLength) + 1
+}
+
+// Format game time (e.g., 540 minutes -> 09:00 AM)
+export const formatGameTime = (totalMinutes: number, includeSeconds = false): string => {
+  const minutesInDay = 24 * 60
+  const currentDayMinutes = totalMinutes % minutesInDay
+
+  const hours = Math.floor(currentDayMinutes / 60)
+  const minutes = Math.floor(currentDayMinutes % 60)
+  const seconds = Math.floor((totalMinutes * 1000) % 60) // Assuming 1 game minute = 1 real second
+
+  const ampm = hours >= 12 ? "PM" : "AM"
+  const displayHours = hours % 12 === 0 ? 12 : hours % 12
+  const displayMinutes = minutes.toString().padStart(2, "0")
+  const displaySeconds = seconds.toString().padStart(2, "0")
+
+  if (includeSeconds) {
+    return `${displayHours}:${displayMinutes}:${displaySeconds} ${ampm}`
+  }
+  return `${displayHours}:${displayMinutes} ${ampm}`
+}
+
+/**
+ * Calculates the player's grade based on productivity and burnout.
+ * A+ (highest) to D (lowest).
+ * @param productivity Player's current productivity stat (0-100)
+ * @param burnout Player's current burnout stat (0-100)
+ * @returns A string representing the player's grade.
+ */
+export function calculatePlayerGrade(productivity: number, burnout: number): string {
+  // Normalize stats: higher productivity is good, lower burnout is good.
+  // Invert burnout so higher value means better (100 - burnout)
+  const effectiveBurnout = 100 - burnout
+
+  // Simple weighted average or combined score
+  // Productivity is generally more impactful for "work grade", but burnout is critical for sustainability.
+  // Let's give productivity a slightly higher weight.
+  const combinedScore = productivity * 0.6 + effectiveBurnout * 0.4
+
+  if (combinedScore >= 95) return "A+"
+  if (combinedScore >= 85) return "A"
+  if (combinedScore >= 75) return "B+"
+  if (combinedScore >= 65) return "B"
+  if (combinedScore >= 55) return "C+"
+  if (combinedScore >= 45) return "C"
+  if (combinedScore >= 30) return "D+"
+  return "D"
+}
+
+/**
+ * Determines the player's level rank based on their current level.
+ * @param level Player's current level
+ * @returns A string representing the player's rank.
+ */
+export function getLevelRank(level: number): string {
+  if (level < 5) return "Associate"
+  if (level < 10) return "Junior Specialist"
+  if (level < 15) return "Specialist"
+  if (level < 20) return "Senior Specialist"
+  if (level < 25) return "Team Lead"
+  if (level < 30) return "Assistant Manager"
+  if (level < 35) return "Manager"
+  if (level < 40) return "Senior Manager"
+  if (level < 45) return "Associate Director"
+  if (level < 50) return "Director"
+  if (level < 60) return "Senior Director"
+  if (level < 70) return "Vice President"
+  if (level < 80) return "Senior Vice President"
+  if (level < 90) return "Executive Vice President"
+  if (level < 100) return "Chief Officer"
+  return "Legend" // For level 100 and above
+}
+
+/**
+ * Performs the smoking action, reducing cigarette count and applying effects.
+ * @param gameState Current game state
+ * @param cigaretteItemId The ID of the cigarette item (e.g., "marlboro-cigarettes")
+ * @param shopItems All available shop items to get effect details
+ * @returns Updated game state and an internal thought message.
+ */
+export function performSmokingAction(
+  gameState: GameState,
+  cigaretteItemId: string,
+  shopItems: ShopItem[],
+): { updatedState: GameState; internalThought: string | null } {
+  const cigaretteInInventory = gameState.consumablesInventory.find((item) => item.itemId === cigaretteItemId)
+  const cigaretteShopItem = shopItems.find((item) => item.id === cigaretteItemId)
+
+  if (!cigaretteInInventory || cigaretteInInventory.quantity <= 0 || !cigaretteShopItem) {
+    return { updatedState: gameState, internalThought: "You don't have any cigarettes to smoke!" }
+  }
+
+  const updatedConsumablesInventory = gameState.consumablesInventory.map((item) =>
+    item.itemId === cigaretteItemId ? { ...item, quantity: item.quantity - 1 } : item,
+  )
+
+  const effect = cigaretteShopItem.effect || {}
+  const updatedStats = {
+    energy: Math.min(100, Math.max(0, gameState.stats.energy + (effect.energy || 0))),
+    productivity: Math.min(100, Math.max(0, gameState.stats.productivity + (effect.productivity || 0))),
+    burnout: Math.min(100, Math.max(0, gameState.stats.burnout + (effect.burnout || 0))),
+  }
+
+  const updatedState = {
+    ...gameState,
+    consumablesInventory: updatedConsumablesInventory,
+    stats: updatedStats,
+  }
+
+  const internalThought = `You smoked a cigarette. Burnout ${effect.burnout > 0 ? "+" : ""}${
+    effect.burnout
+  }, Energy ${effect.energy > 0 ? "+" : ""}${effect.energy}, Productivity ${effect.productivity > 0 ? "+" : ""}${
+    effect.productivity
+  }.`
+
+  return { updatedState, internalThought }
 }

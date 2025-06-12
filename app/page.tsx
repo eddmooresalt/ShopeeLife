@@ -29,6 +29,8 @@ import { InternalThoughtPopup } from "@/components/InternalThoughtPopup"
 import { LunchReminderModal } from "@/components/LunchReminderModal"
 import { useToast } from "@/hooks/use-toast"
 import { PortalTab } from "@/components/tabs/PortalTab"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
 
 const TabContent: Record<TabType, React.ComponentType<any>> = {
   [TabType.Office]: OfficeTab,
@@ -63,6 +65,10 @@ export default function Home() {
   const workStartTimeRef = useRef<number>(0)
   const workDurationSeconds = 10 // Target 10 seconds for task completion
 
+  // Add these new state variables after the existing state declarations
+  const [isEatingLunch, setIsEatingLunch] = useState(false)
+  const [lunchProgress, setLunchProgress] = useState(0)
+
   const { toast } = useToast()
 
   // Load game on mount
@@ -72,10 +78,22 @@ export default function Home() {
       if (savedState) {
         setGameState(savedState)
         setCurrentWeather(getWeather(savedState.gameTime))
+
+        // Ensure daily quests are generated if missing
+        if (savedState && savedState.dailyQuests.length === 0) {
+          const currentDay = Math.floor(savedState.gameTime / (60 * 24))
+          savedState.dailyQuests = generateDailyQuests(currentDay, staticGameData)
+          savedState.lastQuestResetDay = currentDay
+          setGameState(savedState)
+        }
       } else {
-        // No saved state or corrupted state, use initial state
-        setGameState(initialGameState)
-        setCurrentWeather(getWeather(initialGameState.gameTime))
+        // For new games, ensure quests are generated
+        const newGameState = { ...initialGameState }
+        const currentDay = Math.floor(newGameState.gameTime / (60 * 24))
+        newGameState.dailyQuests = generateDailyQuests(currentDay, staticGameData)
+        newGameState.lastQuestResetDay = currentDay
+        setGameState(newGameState)
+        setCurrentWeather(getWeather(newGameState.gameTime))
       }
     } catch (error) {
       console.error("Error loading game:", error)
@@ -123,6 +141,12 @@ export default function Home() {
               description: "Your daily quests have refreshed. Good luck!",
             })
           }, 0)
+        }
+
+        // Ensure daily quests are always available
+        if (updatedState.dailyQuests.length === 0) {
+          updatedState.dailyQuests = generateDailyQuests(newDay, staticGameData)
+          updatedState.lastQuestResetDay = newDay
         }
 
         // Daily Quest Bonus Check (6:30 PM)
@@ -407,10 +431,14 @@ export default function Home() {
     [gameState, isBlockingUI, isWorking],
   )
 
+  // Update the handleLunch function to show progress
   const handleLunch = useCallback(
     (locationId: string, itemId: string) => {
       if (isBlockingUI) return
       setIsBlockingUI(true) // Block UI during lunch
+      setIsEatingLunch(true)
+      setLunchProgress(0)
+
       updateGame((prev) => {
         const { updatedState, internalThought: lunchThought } = calculateLunchProgress(
           prev,
@@ -422,13 +450,28 @@ export default function Home() {
         setInternalThought(lunchThought)
         return updatedState
       })
-      setTimeout(() => {
-        setIsBlockingUI(false) // Unblock UI after lunch
-        toast({
-          title: "Lunch Finished!",
-          description: "You're refueled and ready to go.",
-        })
-      }, 15000) // Increased lunch duration to 15 seconds
+
+      // Progress animation
+      const startTime = Date.now()
+      const duration = 30000 // 30 seconds
+
+      const progressInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime
+        const progress = Math.min(100, (elapsed / duration) * 100)
+        setLunchProgress(progress)
+
+        if (progress >= 100) {
+          clearInterval(progressInterval)
+          setIsEatingLunch(false)
+          setLunchProgress(0)
+          setIsBlockingUI(false)
+          setActiveTab(TabType.Office)
+          toast({
+            title: "Lunch Finished!",
+            description: "You're refueled and ready to get back to work.",
+          })
+        }
+      }, 100)
     },
     [updateGame, isBlockingUI, toast],
   )
@@ -926,6 +969,22 @@ export default function Home() {
             setIsBlockingUI(false)
           }}
         />
+      )}
+
+      {isEatingLunch && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md text-center">
+            <CardHeader>
+              <CardTitle className="text-3xl text-white">Enjoying Lunch... 🍽️</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-white text-lg">Taking a well-deserved break</p>
+              <Progress value={lunchProgress} className="w-full h-4 bg-gray-600 [&>*]:bg-orange-500" />
+              <p className="text-white text-sm">{Math.round(lunchProgress)}% complete</p>
+              <p className="text-gray-300 text-xs">Please wait while you enjoy your meal...</p>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   )

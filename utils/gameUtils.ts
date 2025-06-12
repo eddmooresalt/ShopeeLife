@@ -188,41 +188,51 @@ export const generateDailyQuests = (day: number, gameData: any): DailyQuest[] =>
   const availableTasks = gameData.tasks.filter((t: Task) => !t.isCompleted)
   const availableLocations = gameData.locations
   const availableLunchItems = gameData.lunchItems
-  const availableShopItems = gameData.shopItems.filter((item: any) => !item.isBought) // Only unbought items
+  const availableShopItems = gameData.shopItems.filter((item: any) => !item.isBought)
   const statNames: (keyof GameState["stats"])[] = ["energy", "productivity", "burnout"]
 
   // Helper to pick a random item from an array
   const getRandom = (arr: any[]) => arr[Math.floor(Math.random() * arr.length)]
 
-  // Quest 1: Task Completion
+  // Quest 1: Always a Task Completion quest
   if (availableTasks.length > 0) {
     const task = getRandom(availableTasks)
     quests.push({
-      id: `quest-task-${day}-${quests.length}`,
+      id: `quest-task-${day}-1`,
       type: QuestType.Task,
       description: `Complete "${task.name}"`,
       isCompleted: false,
       isClaimed: false,
       currentProgress: 0,
-      targetValue: 1, // Target 1 completion
+      targetValue: 1,
       rewardExp: 25,
       rewardCoins: 15,
       criteria: { taskId: task.id },
     })
+  } else {
+    // Fallback task quest
+    quests.push({
+      id: `quest-task-${day}-1`,
+      type: QuestType.Task,
+      description: `Complete any work task`,
+      isCompleted: false,
+      isClaimed: false,
+      currentProgress: 0,
+      targetValue: 1,
+      rewardExp: 20,
+      rewardCoins: 10,
+      criteria: {},
+    })
   }
 
-  // Quest 2: Navigate or Shop or Stat
-  const quest2Type = getRandom([
-    QuestType.Navigate,
-    QuestType.Shop,
-    QuestType.Stat,
-    QuestType.SeaTalk,
-    QuestType.Wardrobe,
-  ])
+  // Quest 2: Navigation, Shop, or SeaTalk quest
+  const quest2Types = [QuestType.Navigate, QuestType.Shop, QuestType.SeaTalk]
+  const quest2Type = getRandom(quest2Types)
+
   if (quest2Type === QuestType.Navigate && availableLocations.length > 0) {
     const location = getRandom(availableLocations)
     quests.push({
-      id: `quest-navigate-${day}-${quests.length}`,
+      id: `quest-navigate-${day}-2`,
       type: QuestType.Navigate,
       description: `Visit the ${location.name}`,
       isCompleted: false,
@@ -236,9 +246,9 @@ export const generateDailyQuests = (day: number, gameData: any): DailyQuest[] =>
   } else if (quest2Type === QuestType.Shop && availableShopItems.length > 0) {
     const item = getRandom(availableShopItems)
     quests.push({
-      id: `quest-shop-${day}-${quests.length}`,
+      id: `quest-shop-${day}-2`,
       type: QuestType.Shop,
-      description: `Buy a ${item.name} from the shop`,
+      description: `Buy "${item.name}" from the shop`,
       isCompleted: false,
       isClaimed: false,
       currentProgress: 0,
@@ -247,25 +257,11 @@ export const generateDailyQuests = (day: number, gameData: any): DailyQuest[] =>
       rewardCoins: 20,
       criteria: { shopItemId: item.id },
     })
-  } else if (quest2Type === QuestType.Stat) {
-    const statName = getRandom(statNames)
-    const targetValue = Math.floor(Math.random() * (90 - 60 + 1)) + 60 // Target 60-90
+  } else {
+    // SeaTalk quest as fallback
+    const targetMessages = Math.floor(Math.random() * 3) + 2 // Send 2-4 messages
     quests.push({
-      id: `quest-stat-${day}-${quests.length}`,
-      type: QuestType.Stat,
-      description: `Reach ${targetValue} ${statName} stat`,
-      isCompleted: false,
-      isClaimed: false,
-      currentProgress: 0,
-      targetValue: targetValue,
-      rewardExp: 35,
-      rewardCoins: 25,
-      criteria: { statName: statName },
-    })
-  } else if (quest2Type === QuestType.SeaTalk) {
-    const targetMessages = Math.floor(Math.random() * (5 - 2 + 1)) + 2 // Send 2-5 messages
-    quests.push({
-      id: `quest-seatalk-${day}-${quests.length}`,
+      id: `quest-seatalk-${day}-2`,
       type: QuestType.SeaTalk,
       description: `Send ${targetMessages} messages on SeaTalk`,
       isCompleted: false,
@@ -276,31 +272,16 @@ export const generateDailyQuests = (day: number, gameData: any): DailyQuest[] =>
       rewardCoins: 10,
       criteria: {},
     })
-  } else if (
-    quest2Type === QuestType.Wardrobe &&
-    availableShopItems.filter((item) => item.type === "wardrobe").length > 0
-  ) {
-    const wardrobeItem = getRandom(availableShopItems.filter((item) => item.type === "wardrobe"))
-    quests.push({
-      id: `quest-wardrobe-${day}-${quests.length}`,
-      type: QuestType.Wardrobe,
-      description: `Acquire the "${wardrobeItem.name}"`,
-      isCompleted: false,
-      isClaimed: false,
-      currentProgress: 0,
-      targetValue: 1,
-      rewardExp: 40,
-      rewardCoins: 30,
-      criteria: { wardrobeItemId: wardrobeItem.id },
-    })
   }
 
-  // Quest 3: Lunch or another Task
-  const quest3Type = getRandom([QuestType.Lunch, QuestType.Task])
+  // Quest 3: Lunch or Stat quest
+  const quest3Types = [QuestType.Lunch, QuestType.Stat]
+  const quest3Type = getRandom(quest3Types)
+
   if (quest3Type === QuestType.Lunch && availableLunchItems.length > 0) {
     const item = getRandom(availableLunchItems)
     quests.push({
-      id: `quest-lunch-${day}-${quests.length}`,
+      id: `quest-lunch-${day}-3`,
       type: QuestType.Lunch,
       description: `Eat ${item.name} for lunch`,
       isCompleted: false,
@@ -311,42 +292,30 @@ export const generateDailyQuests = (day: number, gameData: any): DailyQuest[] =>
       rewardCoins: 15,
       criteria: { lunchItemId: item.id },
     })
-  } else if (quest3Type === QuestType.Task && availableTasks.length > 1) {
-    // Pick a different task if possible
-    const task = getRandom(availableTasks.filter((t: Task) => t.id !== quests[0]?.criteria?.taskId))
-    if (task) {
-      quests.push({
-        id: `quest-task-${day}-${quests.length}`,
-        type: QuestType.Task,
-        description: `Complete "${task.name}"`,
-        isCompleted: false,
-        isClaimed: false,
-        currentProgress: 0,
-        targetValue: 1,
-        rewardExp: 30,
-        rewardCoins: 20,
-        criteria: { taskId: task.id },
-      })
-    }
-  }
+  } else {
+    // Stat quest
+    const statName = getRandom(statNames)
+    const targetValue =
+      statName === "burnout"
+        ? Math.floor(Math.random() * 20) + 10
+        : // Lower burnout target (10-30)
+          Math.floor(Math.random() * 30) + 60 // Higher target for energy/productivity (60-90)
 
-  // Ensure we always return 3 quests, even if some types couldn't be generated
-  while (quests.length < 3) {
     quests.push({
-      id: `quest-filler-${day}-${quests.length}`,
-      type: QuestType.Task, // Default to a simple task if others fail
-      description: `Complete any task`,
+      id: `quest-stat-${day}-3`,
+      type: QuestType.Stat,
+      description: `${statName === "burnout" ? "Reduce" : "Reach"} ${targetValue} ${statName}`,
       isCompleted: false,
       isClaimed: false,
       currentProgress: 0,
-      targetValue: 1,
-      rewardExp: 10,
-      rewardCoins: 5,
-      criteria: {},
+      targetValue: targetValue,
+      rewardExp: 30,
+      rewardCoins: 20,
+      criteria: { statName: statName },
     })
   }
 
-  return quests.slice(0, 3) // Ensure exactly 3 quests
+  return quests
 }
 
 // Get weather based on game time

@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { type GameState, type Task, type DailyQuest, QuestType, type WeatherCondition } from "@/types/game"
 import { ProgressDetail } from "@/components/ProgressDetail"
-import { CheckCircle2, XCircle, Sun, Coffee, Sparkles } from "lucide-react"
+import { CheckCircle2, XCircle, Sun, Coffee, Target, Trophy, Gift } from "lucide-react"
 import { formatGameTime } from "@/utils/gameUtils"
 
 interface OfficeTabProps {
@@ -36,6 +36,7 @@ export function OfficeTab({
   const isBonusTime = currentHour < 18 || (currentHour === 18 && gameTime % 60 <= 30)
   const allQuestsCompleted = dailyQuests.every((q) => q.isCompleted)
   const allQuestsClaimed = dailyQuests.every((q) => q.isClaimed)
+  const completedQuestsCount = dailyQuests.filter((q) => q.isCompleted).length
 
   const getGreeting = () => {
     if (currentHour < 12) return "Good Morning"
@@ -56,6 +57,38 @@ export function OfficeTab({
     ]
     return messages[Math.floor(Math.random() * messages.length)]
   }
+
+  const getQuestIcon = (questType: QuestType) => {
+    switch (questType) {
+      case QuestType.Task:
+        return "📋"
+      case QuestType.Navigate:
+        return "🗺️"
+      case QuestType.Lunch:
+        return "🍽️"
+      case QuestType.Shop:
+        return "🛒"
+      case QuestType.Stat:
+        return "📊"
+      case QuestType.SeaTalk:
+        return "💬"
+      case QuestType.Wardrobe:
+        return "👕"
+      default:
+        return "🎯"
+    }
+  }
+
+  const getQuestProgress = (quest: DailyQuest) => {
+    if (quest.type === QuestType.Stat && quest.criteria?.statName) {
+      const currentStatValue = gameState.stats[quest.criteria.statName]
+      return Math.min(currentStatValue, quest.targetValue || 0)
+    }
+    return quest.currentProgress
+  }
+
+  // Ensure we have exactly 3 quests to display
+  const displayQuests = dailyQuests.slice(0, 3)
 
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col">
@@ -114,86 +147,164 @@ export function OfficeTab({
             </CardContent>
           </Card>
 
-          {/* Daily Quests Section */}
+          {/* Daily Quests Section - 3 Column Layout */}
           <Card className="shadow-lg">
             <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-t-lg">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Sparkles className="w-6 h-6" />
-                  <span>Daily Quests</span>
+                  <Target className="w-6 h-6" />
+                  <span>Today's Challenges</span>
+                  <Badge className="bg-white/20 text-white border-white/30">{completedQuestsCount}/3 Complete</Badge>
                 </div>
-                {isBonusTime && !gameState.hasClaimedDailyBonus && (
-                  <Badge className="bg-yellow-500 text-yellow-900 animate-pulse">Bonus until 6:30 PM!</Badge>
-                )}
+                <div className="flex items-center space-x-2">
+                  {allQuestsCompleted && !allQuestsClaimed && (
+                    <Badge className="bg-yellow-500 text-yellow-900 animate-pulse flex items-center space-x-1">
+                      <Trophy className="w-3 h-3" />
+                      <span>Bonus Ready!</span>
+                    </Badge>
+                  )}
+                  {isBonusTime && !gameState.hasClaimedDailyBonus && (
+                    <Badge className="bg-green-500 text-white animate-pulse">Until 6:30 PM!</Badge>
+                  )}
+                </div>
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4">
-              {dailyQuests.length === 0 ? (
+            <CardContent className="p-6">
+              {displayQuests.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="text-4xl mb-2">🎯</div>
                   <p className="text-gray-500 dark:text-gray-400">No daily quests available.</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {dailyQuests.map((quest) => (
-                    <Card
-                      key={quest.id}
-                      className={`transition-all duration-200 ${
-                        quest.isClaimed
-                          ? "opacity-60 bg-green-50 dark:bg-green-900/20 border-green-200"
-                          : quest.isCompleted
-                            ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200"
-                            : "hover:shadow-md"
-                      }`}
-                    >
-                      <CardContent className="p-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="font-semibold text-base">{quest.description}</h4>
-                          {quest.isClaimed ? (
-                            <div className="flex items-center space-x-1 text-green-600">
-                              <CheckCircle2 className="w-5 h-5" />
-                              <span className="text-sm font-medium">Claimed</span>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {displayQuests.map((quest, index) => {
+                    const questProgress = getQuestProgress(quest)
+                    const progressPercentage = quest.targetValue ? (questProgress / quest.targetValue) * 100 : 0
+
+                    return (
+                      <Card
+                        key={quest.id}
+                        className={`transition-all duration-200 ${
+                          quest.isClaimed
+                            ? "opacity-75 bg-green-50 dark:bg-green-900/20 border-green-300"
+                            : quest.isCompleted
+                              ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 shadow-md"
+                              : "hover:shadow-md border-gray-200 dark:border-gray-700"
+                        }`}
+                      >
+                        <CardContent className="p-4">
+                          {/* Quest Header */}
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-2xl">{getQuestIcon(quest.type)}</span>
+                              <Badge variant="outline" className="text-xs">
+                                Quest {index + 1}
+                              </Badge>
                             </div>
-                          ) : quest.isCompleted ? (
+                            {quest.isClaimed ? (
+                              <div className="flex items-center space-x-1 text-green-600">
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span className="text-xs font-medium">Claimed</span>
+                              </div>
+                            ) : quest.isCompleted ? (
+                              <div className="flex items-center space-x-1 text-blue-600">
+                                <Gift className="w-4 h-4" />
+                                <span className="text-xs font-medium">Ready</span>
+                              </div>
+                            ) : (
+                              <XCircle className="w-4 h-4 text-gray-400" />
+                            )}
+                          </div>
+
+                          {/* Quest Description */}
+                          <h4 className="font-semibold text-sm mb-3 leading-tight">{quest.description}</h4>
+
+                          {/* Progress Bar */}
+                          {!quest.isCompleted && (
+                            <div className="mb-3">
+                              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                <span>Progress</span>
+                                <span>
+                                  {questProgress}/{quest.targetValue || 1}
+                                </span>
+                              </div>
+                              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                <div
+                                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
+                                  style={{ width: `${Math.min(100, progressPercentage)}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Rewards */}
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                            <div className="flex items-center justify-between">
+                              <span>Reward:</span>
+                              <span className="font-medium">
+                                {quest.rewardExp} EXP + {quest.rewardCoins} SC
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Action Button */}
+                          {quest.isCompleted && !quest.isClaimed && (
                             <Button
                               onClick={() => onClaimQuestReward(quest.id)}
                               size="sm"
-                              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                              className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
                             >
+                              <Gift className="w-3 h-3 mr-1" />
                               Claim Reward
                             </Button>
-                          ) : (
-                            <XCircle className="w-5 h-5 text-gray-400" />
                           )}
-                        </div>
-                        {!quest.isCompleted && (
-                          <ProgressDetail
-                            label="Progress"
-                            value={quest.currentProgress}
-                            maxValue={quest.targetValue || 1}
-                            className="mb-1"
-                          />
-                        )}
-                        <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
-                          <span>
-                            Reward: {quest.rewardExp} EXP, {quest.rewardCoins} SC
-                          </span>
-                          {quest.type === QuestType.Stat && quest.criteria?.statName && (
-                            <span>
-                              Target {quest.criteria.statName}: {quest.targetValue}
-                            </span>
+
+                          {quest.isClaimed && (
+                            <Button size="sm" className="w-full bg-green-500" disabled>
+                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                              Completed
+                            </Button>
                           )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+
+                          {!quest.isCompleted && (
+                            <Button size="sm" variant="outline" className="w-full" disabled>
+                              <Target className="w-3 h-3 mr-1" />
+                              In Progress
+                            </Button>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
                 </div>
               )}
-              {allQuestsCompleted && !allQuestsClaimed && isBonusTime && (
-                <div className="mt-4 p-3 bg-gradient-to-r from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 rounded-lg border border-yellow-200 dark:border-yellow-700">
-                  <p className="text-center text-sm text-yellow-800 dark:text-yellow-200 font-medium">
-                    🎉 Complete all quests and claim rewards by 6:30 PM for a bonus! 🎉
-                  </p>
+
+              {/* Bonus Information */}
+              {displayQuests.length > 0 && (
+                <div className="mt-6 p-4 bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-900/30 dark:to-blue-900/30 rounded-lg border border-purple-200 dark:border-purple-700">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Trophy className="w-6 h-6 text-purple-600" />
+                      <div>
+                        <h3 className="font-semibold text-purple-800 dark:text-purple-200">Daily Challenge Bonus</h3>
+                        <p className="text-sm text-purple-600 dark:text-purple-300">
+                          Complete all 3 quests and claim rewards by 6:30 PM for a special bonus!
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-purple-600">+50 EXP</div>
+                      <div className="text-sm text-purple-500">+100 SC</div>
+                    </div>
+                  </div>
+
+                  {allQuestsCompleted && !allQuestsClaimed && (
+                    <div className="mt-3 p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded border border-yellow-300 dark:border-yellow-700">
+                      <p className="text-center text-sm text-yellow-800 dark:text-yellow-200 font-medium">
+                        🎉 All quests completed! Claim all rewards to unlock your bonus! 🎉
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>

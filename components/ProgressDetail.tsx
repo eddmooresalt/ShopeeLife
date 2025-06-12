@@ -13,9 +13,8 @@ export function ProgressDetail({ label, value, maxValue, className }: ProgressDe
     <div className={`space-y-1 ${className}`}>
       <div className="flex justify-between text-sm">
         <span>{label}</span>
-        <span>
-          {value}/{maxValue}
-        </span>
+        {/* Display rounded percentage */}
+        <span>{Math.round(percentage)}%</span>
       </div>
       <Progress value={percentage} className="h-2 bg-gray-200 [&>*]:bg-orange-500" />
     </div>

@@ -8,13 +8,23 @@ import type { GameState, LunchLocation, LunchItem } from "@/types/game"
 import { useState } from "react"
 import { Clock, MapPin, Utensils, Coins } from "lucide-react"
 import { formatGameTime } from "@/utils/gameUtils"
+import { ProgressDetail } from "@/components/ProgressDetail" // Import ProgressDetail
 
 interface LunchTabProps {
   gameState: GameState
-  onLunch: (locationId: string, itemId: string) => void
+  onEatLunchStart: (locationId: string, itemId: string) => void // New prop for starting lunch action
+  isEatingLunch: boolean // New prop to indicate if lunch is in progress
+  lunchProgress: number // New prop for lunch progress
+  eatingLunchItemId: string | null // New prop for the item being eaten
 }
 
-export function LunchTab({ gameState, onLunch }: LunchTabProps) {
+export function LunchTab({
+  gameState,
+  onEatLunchStart,
+  isEatingLunch,
+  lunchProgress,
+  eatingLunchItemId,
+}: LunchTabProps) {
   const { lunchLocations, lunchItems, hasEatenLunch, lunchItemEatenId, gameTime, shopeeCoins } = gameState
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
   const [selectedItem, setSelectedItem] = useState<string | null>(null)
@@ -26,10 +36,11 @@ export function LunchTab({ gameState, onLunch }: LunchTabProps) {
   const currentLunchItem = lunchItems.find((item) => item.id === lunchItemEatenId)
   const selectedLocationData = lunchLocations.find((loc) => loc.id === selectedLocation)
   const selectedItemData = lunchItems.find((item) => item.id === selectedItem)
+  const eatingItemData = lunchItems.find((item) => item.id === eatingLunchItemId) // Get data for item being eaten
 
-  const handleEatLunch = () => {
-    if (selectedLocation && selectedItem && isLunchTime && !hasEatenLunch) {
-      onLunch(selectedLocation, selectedItem)
+  const handleEatLunchClick = () => {
+    if (selectedLocation && selectedItem && isLunchTime && !hasEatenLunch && !isEatingLunch) {
+      onEatLunchStart(selectedLocation, selectedItem)
     }
   }
 
@@ -83,7 +94,6 @@ export function LunchTab({ gameState, onLunch }: LunchTabProps) {
           </div>
 
           <div className="p-6 space-y-6">
-            {/* Rest of the lunch content remains the same */}
             {/* Lunch Time Status */}
             <Card
               className={`border-2 ${isLunchTime ? "border-green-500 bg-green-50 dark:bg-green-900/20" : "border-red-500 bg-red-50 dark:bg-red-900/20"}`}
@@ -131,6 +141,18 @@ export function LunchTab({ gameState, onLunch }: LunchTabProps) {
                   </p>
                 </CardContent>
               </Card>
+            ) : isEatingLunch ? (
+              /* Lunch Progress Bar */
+              <Card className="border-2 border-orange-300 bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30">
+                <CardContent className="p-6 text-center space-y-4">
+                  <div className="text-6xl mb-4">{eatingItemData?.emoji || "🍽️"}</div>
+                  <h3 className="text-xl font-bold text-orange-800 dark:text-orange-200">
+                    Enjoying {eatingItemData?.name}...
+                  </h3>
+                  <ProgressDetail label="Eating Progress" value={lunchProgress} maxValue={100} />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Your energy will be restored shortly!</p>
+                </CardContent>
+              </Card>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Location Selection */}
@@ -153,9 +175,9 @@ export function LunchTab({ gameState, onLunch }: LunchTabProps) {
                               setSelectedItem(null) // Reset item selection when location changes
                             }}
                             className={`flex items-center justify-start h-auto py-4 px-4 ${
-                              !isLunchTime ? "opacity-50 cursor-not-allowed" : ""
+                              !isLunchTime || isEatingLunch ? "opacity-50 cursor-not-allowed" : ""
                             }`}
-                            disabled={!isLunchTime || hasEatenLunch}
+                            disabled={!isLunchTime || hasEatenLunch || isEatingLunch}
                           >
                             <span className="text-3xl mr-3">{location.emoji}</span>
                             <div className="text-left">
@@ -191,9 +213,11 @@ export function LunchTab({ gameState, onLunch }: LunchTabProps) {
                               variant={selectedItem === item.id ? "default" : "outline"}
                               onClick={() => setSelectedItem(item.id)}
                               className={`flex items-center justify-between h-auto py-4 px-4 ${
-                                !isLunchTime || shopeeCoins < item.price ? "opacity-50 cursor-not-allowed" : ""
+                                !isLunchTime || shopeeCoins < item.price || isEatingLunch
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : ""
                               }`}
-                              disabled={!isLunchTime || hasEatenLunch || shopeeCoins < item.price}
+                              disabled={!isLunchTime || hasEatenLunch || shopeeCoins < item.price || isEatingLunch}
                             >
                               <div className="flex items-center">
                                 <span className="text-3xl mr-3">{item.emoji}</span>
@@ -224,7 +248,7 @@ export function LunchTab({ gameState, onLunch }: LunchTabProps) {
             )}
 
             {/* Order Summary & Action */}
-            {!hasEatenLunch && selectedLocation && selectedItem && (
+            {!hasEatenLunch && selectedLocation && selectedItem && !isEatingLunch && (
               <Card className="border-2 border-orange-300 bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
@@ -257,13 +281,14 @@ export function LunchTab({ gameState, onLunch }: LunchTabProps) {
                       Total: {selectedItemData?.price} SC
                     </div>
                     <Button
-                      onClick={handleEatLunch}
+                      onClick={handleEatLunchClick}
                       disabled={
                         !isLunchTime ||
                         hasEatenLunch ||
                         !selectedLocation ||
                         !selectedItem ||
-                        (selectedItemData && shopeeCoins < selectedItemData.price)
+                        (selectedItemData && shopeeCoins < selectedItemData.price) ||
+                        isEatingLunch
                       }
                       className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white px-8 py-3 text-lg font-semibold shadow-lg"
                       size="lg"

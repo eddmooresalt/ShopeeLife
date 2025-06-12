@@ -11,6 +11,9 @@ import {
   getGameDay,
   performSmokingAction,
   processGameTick,
+  getLevelRank,
+  calculatePlayerGrade,
+  generateSeaTalkMessage,
 } from "@/utils/gameUtils"
 import { GameHeader } from "@/components/GameHeader"
 import { BottomNavigation } from "@/components/BottomNavigation"
@@ -39,7 +42,14 @@ export default function Home() {
   const [showSleepScreen, setShowSleepScreen] = useState(false)
   const [showRandomEvent, setShowRandomEvent] = useState(false)
   const [currentRandomEvent, setCurrentRandomEvent] = useState<RandomEvent | null>(null)
-  // Removed: const [isGamePaused, setIsGamePaused] = useState(false);
+
+  // Lunch progress states
+  const [isEatingLunch, setIsEatingLunch] = useState(false)
+  const [lunchProgress, setLunchProgress] = useState(0)
+  const [eatingLunchItemId, setEatingLunchItemId] = useState<string | null>(null)
+  const [eatingLunchLocationId, setEatingLunchLocationId] = useState<string | null>(null)
+  const lunchTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const LUNCH_DURATION_SECONDS = 5 // Duration for lunch action
 
   const gameIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const internalThoughtTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -84,8 +94,6 @@ export default function Home() {
     }
   }, [internalThought])
 
-  // Removed: useEffect for isGamePaused state
-
   useEffect(() => {
     gameIntervalRef.current = setInterval(() => {
       setGameState((prevGameState) => {
@@ -93,23 +101,19 @@ export default function Home() {
 
         if (newGameState._triggerLunchReminder) {
           setShowLunchReminder(true)
-          // Removed: setIsGamePaused(true);
           newGameState._triggerLunchReminder = false
         }
         if (newGameState._triggerOvertimePrompt) {
           setShowOvertimePrompt(true)
-          // Removed: setIsGamePaused(true);
           newGameState._triggerOvertimePrompt = false
         }
         if (newGameState._triggerSleepScreen) {
           setShowSleepScreen(true)
-          // Removed: setIsGamePaused(true);
           newGameState._triggerSleepScreen = false
         }
         if (newGameState._triggerRandomEvent && newGameState._currentRandomEvent) {
           setCurrentRandomEvent(newGameState._currentRandomEvent)
           setShowRandomEvent(true)
-          // Removed: setIsGamePaused(true);
           newGameState._triggerRandomEvent = false
           newGameState._currentRandomEvent = null
         }
@@ -126,7 +130,7 @@ export default function Home() {
         clearInterval(gameIntervalRef.current)
       }
     }
-  }, [currentDay]) // Removed isGamePaused from dependencies
+  }, [currentDay])
 
   useEffect(() => {
     if (isWorking && workingTaskId) {
@@ -196,6 +200,39 @@ export default function Home() {
     }
   }, [isWorking, workingTaskId])
 
+  // Lunch progress effect
+  useEffect(() => {
+    if (isEatingLunch && eatingLunchItemId && eatingLunchLocationId) {
+      const lunchStartTime = Date.now()
+      lunchTimerRef.current = setInterval(() => {
+        const elapsedTime = (Date.now() - lunchStartTime) / 1000
+        const progress = Math.min(100, (elapsedTime / LUNCH_DURATION_SECONDS) * 100)
+        setLunchProgress(progress)
+
+        if (progress >= 100) {
+          if (lunchTimerRef.current) {
+            clearInterval(lunchTimerRef.current)
+          }
+          setIsEatingLunch(false)
+          setEatingLunchItemId(null)
+          setEatingLunchLocationId(null)
+          setLunchProgress(0)
+          // Trigger the actual lunch effect after progress bar completes
+          handleLunchComplete(eatingLunchLocationId, eatingLunchItemId)
+        }
+      }, 100) // Update every 100ms for smooth progress
+    } else {
+      if (lunchTimerRef.current) {
+        clearInterval(lunchTimerRef.current)
+      }
+    }
+    return () => {
+      if (lunchTimerRef.current) {
+        clearInterval(lunchTimerRef.current)
+      }
+    }
+  }, [isEatingLunch, eatingLunchItemId, eatingLunchLocationId])
+
   const handleWork = useCallback(
     (taskId: string) => {
       if (isWorking) {
@@ -224,7 +261,40 @@ export default function Home() {
     [gameState, isWorking],
   )
 
-  const handleLunch = useCallback(
+  // New function to start the lunch progress bar
+  const handleEatLunchStart = useCallback(
+    (locationId: string, itemId: string) => {
+      const item = gameData.lunchItems.find((i) => i.id === itemId)
+      if (!item) {
+        setInternalThought("Invalid lunch item selected.")
+        return
+      }
+      if (gameState.shopeeCoins < item.price) {
+        setInternalThought(`Not enough ShopeeCoins for ${item.name}. You need ${item.price} SC.`)
+        return
+      }
+      if (gameState.hasEatenLunch) {
+        setInternalThought("You've already had lunch today. No more food for you!")
+        return
+      }
+      const currentHour = Math.floor(gameState.gameTime / 60) % 24
+      const isLunchTime = currentHour >= 12 && currentHour < 14
+      if (!isLunchTime) {
+        setInternalThought("It's not lunch time yet! Come back between 12:00 PM - 2:00 PM.")
+        return
+      }
+
+      setIsEatingLunch(true)
+      setEatingLunchItemId(itemId)
+      setEatingLunchLocationId(locationId)
+      setLunchProgress(0)
+      setInternalThought(`Preparing to enjoy ${item.name}...`)
+    },
+    [gameState.shopeeCoins, gameState.hasEatenLunch, gameState.gameTime],
+  )
+
+  // Renamed from handleLunch to handleLunchComplete, now called after progress bar
+  const handleLunchComplete = useCallback(
     (locationId: string, itemId: string) => {
       setGameState((prev) => {
         const { updatedState, internalThought: lunchThought } = calculateLunchProgress(
@@ -246,7 +316,6 @@ export default function Home() {
         return { ...updatedState, dailyQuests: updatedDailyQuests }
       })
       setShowLunchReminder(false)
-      // Removed: setIsGamePaused(false);
     },
     [gameData.lunchLocations, gameData.lunchItems],
   )
@@ -492,7 +561,6 @@ export default function Home() {
         setInternalThought(chosen.result)
         setShowRandomEvent(false)
         setCurrentRandomEvent(null)
-        // Removed: setIsGamePaused(false);
 
         return {
           ...prev,
@@ -507,7 +575,6 @@ export default function Home() {
 
   const handleOvertimeDecision = useCallback((decision: "work" | "sleep") => {
     setShowOvertimePrompt(false)
-    // Removed: setIsGamePaused(false);
 
     if (decision === "work") {
       setInternalThought("You decided to work overtime. Hope it pays off!")
@@ -522,13 +589,11 @@ export default function Home() {
     } else {
       setInternalThought("You decided to call it a day. Rest is important!")
       setShowSleepScreen(true)
-      // Removed: setIsGamePaused(true);
     }
   }, [])
 
   const handleSleep = useCallback(() => {
     setShowSleepScreen(false)
-    // Removed: setIsGamePaused(false);
     setGameState((prev) => ({
       ...prev,
       gameTime: getGameDay(prev.gameTime) * 24 * 60 + 9 * 60,
@@ -617,11 +682,9 @@ export default function Home() {
 
   const handleProgressComplete = useCallback((thought: string) => {
     setInternalThought(thought)
-    // Removed: setIsGamePaused(false);
   }, [])
 
   const handleActionStart = useCallback(() => {
-    // Removed: setIsGamePaused(true);
     // This function now primarily serves as a hook for other potential side effects
     // if needed in the future, but no longer pauses the game time.
   }, [])
@@ -633,7 +696,6 @@ export default function Home() {
     }))
     setActiveTab(TabType.Navigate)
     setInternalThought("You are now back in the office, ready to navigate.")
-    // Removed: setIsGamePaused(false);
   }, [])
 
   // NEW: Function to handle redirection after toilet action
@@ -644,7 +706,6 @@ export default function Home() {
     }))
     setActiveTab(TabType.Navigate)
     setInternalThought("You are now back in the office, ready to navigate.")
-    // Removed: setIsGamePaused(false);
   }, [])
 
   useEffect(() => {
@@ -732,20 +793,51 @@ export default function Home() {
           />
         )
       case TabType.Tasks:
-        return <TasksTab gameState={gameState} onWork={handleWork} onClaimQuestReward={handleClaimDailyQuest} />
+        return (
+          <TasksTab
+            gameState={gameState}
+            onWork={handleWork}
+            onClaimQuestReward={handleClaimDailyQuest}
+            isWorking={isWorking} // Pass isWorking
+            workingTaskId={workingTaskId} // Pass workingTaskId
+            workProgress={workProgress} // Pass workProgress
+          />
+        )
       case TabType.Lunch:
-        return <LunchTab gameState={gameState} onLunch={handleLunch} />
+        return (
+          <LunchTab
+            gameState={gameState}
+            onEatLunchStart={handleEatLunchStart}
+            isEatingLunch={isEatingLunch}
+            lunchProgress={lunchProgress}
+            eatingLunchItemId={eatingLunchItemId}
+          />
+        )
       case TabType.Shop:
         return <ShopTab gameState={gameState} onBuyItem={handleBuyItem} />
       case TabType.Character:
-        return <CharacterTab gameState={gameState} onUpdatePlayerName={handlePlayerNameChange} />
+        return (
+          <CharacterTab
+            gameState={gameState}
+            onUpdatePlayerName={handlePlayerNameChange}
+            playerRank={getLevelRank(gameState.level)}
+            playerGrade={calculatePlayerGrade(gameState.stats.productivity, gameState.stats.burnout)}
+          />
+        )
       case TabType.SeaTalk:
-        return <SeaTalkTab gameState={gameState} onSendMessage={handleSendMessage} />
+        return (
+          <SeaTalkTab
+            gameState={gameState}
+            onSendMessage={handleSendMessage}
+            generateSeaTalkMessage={generateSeaTalkMessage}
+            playerName={gameState.playerName}
+          />
+        )
       case TabType.Navigate:
         return <NavigateTab onNavigate={handleNavigate} locations={gameData.locations} gameState={gameState} />
       case TabType.Portal:
         return (
-          <PortalTab gameState={gameState} onPortalAction={() => {}} /> // Placeholder for onPortalAction
+          <PortalTab gameState={gameState} setGameState={setGameState} onProgressComplete={handleProgressComplete} />
         )
       default:
         return (
@@ -768,20 +860,24 @@ export default function Home() {
     activeTab,
     gameState,
     handleWork,
-    handleLunch,
+    handleEatLunchStart,
     handleBuyItem,
     handleNavigate,
     handleClaimDailyQuest,
     handleSendMessage,
+    handleRandomEventChoice,
     handlePlayerNameChange,
     handleLocationAction,
     handleProgressComplete,
     handleActionStart,
     handleSmokingCompleteRedirect,
-    handleToiletActionCompleteRedirect, // Added dependency
-    isWorking,
-    workingTaskId,
-    workProgress,
+    handleToiletActionCompleteRedirect,
+    isWorking, // Dependency for TasksTab
+    workingTaskId, // Dependency for TasksTab
+    workProgress, // Dependency for TasksTab
+    isEatingLunch,
+    lunchProgress,
+    eatingLunchItemId,
     setActiveTab,
     handleUseConsumable,
     handleNavigateToLocation,
@@ -790,25 +886,37 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen w-full max-w-md mx-auto bg-gray-100 dark:bg-gray-900 font-sans">
       <GameHeader gameState={gameState} currentWeather={gameState.currentWeather} />
+
       <main className="flex-1 overflow-auto bg-white dark:bg-gray-800 shadow-inner relative pb-24">
         {renderTabContent()}
-        {internalThought && <InternalThoughtPopup message={internalThought} />}
+        {internalThought && (
+          <InternalThoughtPopup message={internalThought} onDismiss={() => setInternalThought(null)} />
+        )}
       </main>
-      <BottomNavigation activeTab={activeTab} setActiveTab={setActiveTab} tabs={gameData.bottomNavigationTabs} />
+
+      <BottomNavigation
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        tabs={gameData.bottomNavigationTabs}
+        gameState={gameState}
+      />
+
       {showLunchReminder && (
         <LunchReminderModal
           onClose={() => {
             setShowLunchReminder(false)
           }}
-          onGoToLunch={() => {
-            // Renamed from onNavigateToLunch to match component prop
+          onNavigateToLunch={() => {
             setActiveTab(TabType.Lunch)
             setShowLunchReminder(false)
           }}
         />
       )}
-      {showOvertimePrompt && <OvertimePromptModal onDecision={handleOvertimeDecision} />}
-      {showSleepScreen && <SleepScreen countdown={30} />} {/* Pass a default countdown value */}
+
+      {showOvertimePrompt && <OvertimePromptModal onDecide={handleOvertimeDecision} />}
+
+      {showSleepScreen && <SleepScreen onSleep={handleSleep} />}
+
       {showRandomEvent && currentRandomEvent && (
         <RandomEventModal event={currentRandomEvent} onChoice={handleRandomEventChoice} />
       )}

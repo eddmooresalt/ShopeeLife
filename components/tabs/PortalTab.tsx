@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { useToast } from "@/hooks/use-toast"
 import type { GameState } from "@/types/game"
 import { useState } from "react"
@@ -252,9 +253,9 @@ export function PortalTab({ gameState, onPortalAction }: PortalTabProps) {
   const selectedPortalData = portals.find((p) => p.id === selectedPortal)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-blue-900">
+    <div className="h-[calc(100vh-140px)] flex flex-col bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-blue-900">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 shadow-lg">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 shadow-lg flex-shrink-0">
         <div className="flex items-center space-x-3">
           <Computer className="w-8 h-8" />
           <div>
@@ -264,151 +265,155 @@ export function PortalTab({ gameState, onPortalAction }: PortalTabProps) {
         </div>
       </div>
 
-      <div className="p-6">
-        {!selectedPortal ? (
-          /* Portal Grid */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {portals.map((portal) => {
-              const Icon = portal.icon
-              const isAvailable = canUsePortal(portal.id, portal.cooldown)
-              const timeLeft = getTimeUntilAvailable(portal.id, portal.cooldown)
+      <ScrollArea className="flex-1">
+        <div className="p-6">
+          {!selectedPortal ? (
+            /* Portal Grid */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {portals.map((portal) => {
+                const Icon = portal.icon
+                const isAvailable = canUsePortal(portal.id, portal.cooldown)
+                const timeLeft = getTimeUntilAvailable(portal.id, portal.cooldown)
 
-              return (
-                <Card
-                  key={portal.id}
-                  className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
-                    isAvailable ? "hover:scale-105" : "opacity-75"
-                  }`}
-                  onClick={() => isAvailable && setSelectedPortal(portal.id)}
-                >
-                  <CardHeader className="text-center pb-2">
-                    <div className="flex justify-center mb-3">
-                      <div
-                        className={`p-4 rounded-full ${
-                          isAvailable ? "bg-blue-100 dark:bg-blue-900" : "bg-gray-100 dark:bg-gray-700"
-                        }`}
-                      >
-                        <Icon
-                          className={`w-8 h-8 ${isAvailable ? "text-blue-600 dark:text-blue-400" : "text-gray-400"}`}
-                        />
+                return (
+                  <Card
+                    key={portal.id}
+                    className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                      isAvailable ? "hover:scale-105" : "opacity-75"
+                    }`}
+                    onClick={() => isAvailable && setSelectedPortal(portal.id)}
+                  >
+                    <CardHeader className="text-center pb-2">
+                      <div className="flex justify-center mb-3">
+                        <div
+                          className={`p-4 rounded-full ${
+                            isAvailable ? "bg-blue-100 dark:bg-blue-900" : "bg-gray-100 dark:bg-gray-700"
+                          }`}
+                        >
+                          <Icon
+                            className={`w-8 h-8 ${isAvailable ? "text-blue-600 dark:text-blue-400" : "text-gray-400"}`}
+                          />
+                        </div>
                       </div>
-                    </div>
-                    <CardTitle className="flex items-center justify-center space-x-2">
-                      <span className="text-2xl">{portal.emoji}</span>
-                      <span>{portal.name}</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-center">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{portal.description}</p>
+                      <CardTitle className="flex items-center justify-center space-x-2">
+                        <span className="text-2xl">{portal.emoji}</span>
+                        <span>{portal.name}</span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-center">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{portal.description}</p>
 
-                    {isAvailable ? (
-                      <Badge variant="default" className="bg-green-500">
-                        <Clock className="w-3 h-3 mr-1" />
-                        Available
-                      </Badge>
-                    ) : (
-                      <div className="space-y-2">
-                        <Badge variant="secondary">
+                      {isAvailable ? (
+                        <Badge variant="default" className="bg-green-500">
                           <Clock className="w-3 h-3 mr-1" />
-                          Cooldown: {timeLeft}m
+                          Available
                         </Badge>
-                        <Progress value={((portal.cooldown - timeLeft) / portal.cooldown) * 100} className="h-2" />
-                      </div>
-                    )}
+                      ) : (
+                        <div className="space-y-2">
+                          <Badge variant="secondary">
+                            <Clock className="w-3 h-3 mr-1" />
+                            Cooldown: {timeLeft}m
+                          </Badge>
+                          <Progress value={((portal.cooldown - timeLeft) / portal.cooldown) * 100} className="h-2" />
+                        </div>
+                      )}
 
-                    <div className="mt-3 text-xs text-gray-500">{portal.actions.length} services available</div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        ) : (
-          /* Portal Detail View */
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Button variant="outline" onClick={() => setSelectedPortal(null)} className="mr-3">
-                      ← Back
-                    </Button>
-                    <span className="text-3xl">{selectedPortalData?.emoji}</span>
-                    <div>
-                      <CardTitle>{selectedPortalData?.name}</CardTitle>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{selectedPortalData?.description}</p>
-                    </div>
-                  </div>
-                  <Badge variant={canUsePortal(selectedPortal, selectedPortalData?.cooldown) ? "default" : "secondary"}>
-                    {canUsePortal(selectedPortal, selectedPortalData?.cooldown) ? "Available" : "On Cooldown"}
-                  </Badge>
-                </div>
-              </CardHeader>
-            </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {selectedPortalData?.actions.map((action) => (
-                <Card key={action.id} className="h-full">
-                  <CardContent className="p-6">
-                    <h3 className="font-semibold text-lg mb-2">{action.name}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{action.description}</p>
-
-                    {/* Effects Display */}
-                    <div className="space-y-2 mb-4">
-                      {action.effect.exp && (
-                        <div className="flex items-center text-sm">
-                          <Award className="w-4 h-4 mr-2 text-yellow-500" />
-                          <span>+{action.effect.exp} EXP</span>
-                        </div>
-                      )}
-                      {action.effect.shopeeCoins && (
-                        <div className="flex items-center text-sm">
-                          <span className="w-4 h-4 mr-2 text-orange-500">🧡</span>
-                          <span>+{action.effect.shopeeCoins} SC</span>
-                        </div>
-                      )}
-                      {action.effect.energy && (
-                        <div className="flex items-center text-sm">
-                          <Zap className="w-4 h-4 mr-2 text-green-500" />
-                          <span>+{action.effect.energy} Energy</span>
-                        </div>
-                      )}
-                      {action.effect.productivity && (
-                        <div className="flex items-center text-sm">
-                          <TrendingUp className="w-4 h-4 mr-2 text-blue-500" />
-                          <span>+{action.effect.productivity} Productivity</span>
-                        </div>
-                      )}
-                      {action.effect.social && (
-                        <div className="flex items-center text-sm">
-                          <Users className="w-4 h-4 mr-2 text-purple-500" />
-                          <span>+{action.effect.social} Social</span>
-                        </div>
-                      )}
-                      {action.effect.burnout && action.effect.burnout < 0 && (
-                        <div className="flex items-center text-sm">
-                          <Heart className="w-4 h-4 mr-2 text-red-500" />
-                          <span>{action.effect.burnout} Burnout</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <Button
-                      onClick={() => handlePortalAction(selectedPortal, action.id, selectedPortalData?.cooldown)}
-                      disabled={
-                        !canUsePortal(selectedPortal, selectedPortalData?.cooldown) ||
-                        (action.cost > 0 && gameState.shopeeCoins < action.cost)
-                      }
-                      className="w-full"
-                    >
-                      {action.cost > 0 ? `Use (${action.cost} SC)` : "Use Service"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+                      <div className="mt-3 text-xs text-gray-500">{portal.actions.length} services available</div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
-          </div>
-        )}
-      </div>
+          ) : (
+            /* Portal Detail View */
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Button variant="outline" onClick={() => setSelectedPortal(null)} className="mr-3">
+                        ← Back
+                      </Button>
+                      <span className="text-3xl">{selectedPortalData?.emoji}</span>
+                      <div>
+                        <CardTitle>{selectedPortalData?.name}</CardTitle>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{selectedPortalData?.description}</p>
+                      </div>
+                    </div>
+                    <Badge
+                      variant={canUsePortal(selectedPortal, selectedPortalData?.cooldown) ? "default" : "secondary"}
+                    >
+                      {canUsePortal(selectedPortal, selectedPortalData?.cooldown) ? "Available" : "On Cooldown"}
+                    </Badge>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {selectedPortalData?.actions.map((action) => (
+                  <Card key={action.id} className="h-full">
+                    <CardContent className="p-6">
+                      <h3 className="font-semibold text-lg mb-2">{action.name}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{action.description}</p>
+
+                      {/* Effects Display */}
+                      <div className="space-y-2 mb-4">
+                        {action.effect.exp && (
+                          <div className="flex items-center text-sm">
+                            <Award className="w-4 h-4 mr-2 text-yellow-500" />
+                            <span>+{action.effect.exp} EXP</span>
+                          </div>
+                        )}
+                        {action.effect.shopeeCoins && (
+                          <div className="flex items-center text-sm">
+                            <span className="w-4 h-4 mr-2 text-orange-500">🧡</span>
+                            <span>+{action.effect.shopeeCoins} SC</span>
+                          </div>
+                        )}
+                        {action.effect.energy && (
+                          <div className="flex items-center text-sm">
+                            <Zap className="w-4 h-4 mr-2 text-green-500" />
+                            <span>+{action.effect.energy} Energy</span>
+                          </div>
+                        )}
+                        {action.effect.productivity && (
+                          <div className="flex items-center text-sm">
+                            <TrendingUp className="w-4 h-4 mr-2 text-blue-500" />
+                            <span>+{action.effect.productivity} Productivity</span>
+                          </div>
+                        )}
+                        {action.effect.social && (
+                          <div className="flex items-center text-sm">
+                            <Users className="w-4 h-4 mr-2 text-purple-500" />
+                            <span>+{action.effect.social} Social</span>
+                          </div>
+                        )}
+                        {action.effect.burnout && action.effect.burnout < 0 && (
+                          <div className="flex items-center text-sm">
+                            <Heart className="w-4 h-4 mr-2 text-red-500" />
+                            <span>{action.effect.burnout} Burnout</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <Button
+                        onClick={() => handlePortalAction(selectedPortal, action.id, selectedPortalData?.cooldown)}
+                        disabled={
+                          !canUsePortal(selectedPortal, selectedPortalData?.cooldown) ||
+                          (action.cost > 0 && gameState.shopeeCoins < action.cost)
+                        }
+                        className="w-full"
+                      >
+                        {action.cost > 0 ? `Use (${action.cost} SC)` : "Use Service"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
     </div>
   )
 }

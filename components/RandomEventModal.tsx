@@ -52,52 +52,56 @@ export function RandomEventModal({ event, onChoice }: RandomEventModalProps) {
                 Choose Your Response:
               </h3>
 
-              {event.choices.map((choice, index) => (
-                <Card
-                  key={choice.id}
-                  className="transition-all duration-300 hover:scale-[1.02] hover:shadow-xl cursor-pointer border-3 hover:border-purple-400 bg-gradient-to-r from-white to-gray-50 dark:from-gray-700 dark:to-gray-600"
-                  onClick={() => onChoice(choice.id)}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-start space-x-6">
-                      <div className="flex-shrink-0">
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold text-2xl shadow-lg">
-                          {String.fromCharCode(65 + index)}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {event.choices.map((choice, index) => (
+                  <Card
+                    key={choice.id}
+                    className="transition-all duration-300 hover:scale-[1.02] hover:shadow-xl cursor-pointer border-3 hover:border-purple-400 bg-gradient-to-r from-white to-gray-50 dark:from-gray-700 dark:to-gray-600 h-full"
+                    onClick={() => onChoice(choice.id)}
+                  >
+                    <CardContent className="p-6 h-full flex flex-col">
+                      <div className="flex items-start space-x-4 flex-1">
+                        <div className="flex-shrink-0">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                            {String.fromCharCode(65 + index)}
+                          </div>
+                        </div>
+
+                        <div className="flex-1 flex flex-col">
+                          <h4 className="font-semibold text-lg mb-3 text-gray-800 dark:text-gray-200 leading-tight">
+                            {choice.text}
+                          </h4>
+
+                          {choice.effect && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {Object.entries(choice.effect).map(([stat, value]) => (
+                                <div
+                                  key={stat}
+                                  className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                    value > 0
+                                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                      : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                  }`}
+                                >
+                                  {getEffectIcon(choice.effect)}
+                                  <span>
+                                    {value > 0 ? "+" : ""}
+                                    {value} {stat}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <p className="text-sm text-gray-600 dark:text-gray-400 italic leading-relaxed mt-auto">
+                            "{choice.result}"
+                          </p>
                         </div>
                       </div>
-
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-xl mb-3 text-gray-800 dark:text-gray-200">{choice.text}</h4>
-
-                        {choice.effect && (
-                          <div className="flex flex-wrap gap-3 mb-4">
-                            {Object.entries(choice.effect).map(([stat, value]) => (
-                              <div
-                                key={stat}
-                                className={`flex items-center space-x-2 px-3 py-2 rounded-full text-sm font-medium shadow-sm ${
-                                  value > 0
-                                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                    : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                }`}
-                              >
-                                {getEffectIcon(choice.effect)}
-                                <span>
-                                  {value > 0 ? "+" : ""}
-                                  {value} {stat}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        <p className="text-base text-gray-600 dark:text-gray-400 italic leading-relaxed">
-                          "{choice.result}"
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
           </CardContent>
         </ScrollArea>

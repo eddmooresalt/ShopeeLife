@@ -318,13 +318,14 @@ export const generateDailyQuests = (day: number, gameData: any): DailyQuest[] =>
   return quests
 }
 
-// Get weather based on game time
+// Get weather based on game time - more stable weather system
 export const getWeather = (gameTime: number): WeatherCondition => {
   const minutesInDay = 24 * 60
   const currentDayMinutes = gameTime % minutesInDay
   const currentHour = Math.floor(currentDayMinutes / 60)
+  const currentDay = Math.floor(gameTime / minutesInDay)
 
-  // Time of day
+  // Time of day weather (always consistent)
   if (currentHour >= 5 && currentHour < 7) {
     return { type: "Sunrise", description: "Sunrise" }
   } else if (currentHour >= 18 && currentHour < 20) {
@@ -333,11 +334,23 @@ export const getWeather = (gameTime: number): WeatherCondition => {
     return { type: "Night Time", description: "Night Time" }
   }
 
-  // Random weather for working hours (7 AM to 6 PM)
-  const weatherTypes: WeatherCondition["type"][] = ["Sunny", "Cloudy", "Rainy", "Windy", "Thunderstorm"]
-  const randomWeatherType = weatherTypes[Math.floor(Math.random() * weatherTypes.length)]
+  // Stable weather for working hours - changes only every 4 hours
+  const weatherBlock = Math.floor(currentHour / 4) // 0, 1, 2, 3, 4, 5
+  const weatherSeed = currentDay * 10 + weatherBlock // Deterministic seed
 
-  switch (randomWeatherType) {
+  const weatherTypes: WeatherCondition["type"][] = ["Sunny", "Cloudy", "Rainy", "Windy", "Thunderstorm"]
+  const weatherIndex = weatherSeed % weatherTypes.length
+  const selectedWeatherType = weatherTypes[weatherIndex]
+
+  // Weight towards more pleasant weather (70% chance of Sunny/Cloudy)
+  const pleasantWeatherChance = weatherSeed % 10
+  if (pleasantWeatherChance < 4) {
+    return { type: "Sunny", description: "Sunny" }
+  } else if (pleasantWeatherChance < 7) {
+    return { type: "Cloudy", description: "Cloudy" }
+  }
+
+  switch (selectedWeatherType) {
     case "Sunny":
       return { type: "Sunny", description: "Sunny" }
     case "Cloudy":

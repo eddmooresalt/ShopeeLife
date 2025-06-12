@@ -1,197 +1,273 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
-import { Coffee, ArrowLeft } from "lucide-react"
-import type { GameState, LunchOption, GameTime } from "../../types/game"
-import { lunchOptions, lunchLocations } from "../../data/gameData"
-import { formatGameTime } from "../../utils/gameUtils"
-import { ProgressDetail } from "../ProgressDetail" // Import ProgressDetail
+import type { GameState, LunchLocation, LunchItem } from "@/types/game"
+import { useState } from "react"
+import { Clock, MapPin, Utensils, Coins } from "lucide-react"
+import { formatGameTime } from "@/utils/gameUtils"
 
 interface LunchTabProps {
   gameState: GameState
-  gameTime: GameTime
-  onOrderLunch: (lunch: LunchOption) => void
-  isLunchInProgress: boolean // New prop
-  lunchProgress: number // New prop
-  selectedLunchEmoji: string | null // New prop for selected lunch emoji
+  onLunch: (locationId: string, itemId: string) => void
 }
 
-const LunchTab: React.FC<LunchTabProps> = ({
-  gameState,
-  gameTime,
-  onOrderLunch,
-  isLunchInProgress,
-  lunchProgress,
-  selectedLunchEmoji,
-}) => {
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null)
-  const isLunchTime = gameTime.hour >= 12 && gameTime.hour <= 14
+export function LunchTab({ gameState, onLunch }: LunchTabProps) {
+  const { lunchLocations, lunchItems, hasEatenLunch, lunchItemEatenId, gameTime, shopeeCoins } = gameState
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
+  const [selectedItem, setSelectedItem] = useState<string | null>(null)
 
-  // Reset selected location on new day
-  useEffect(() => {
-    setSelectedLocationId(null)
-  }, [gameState.day])
+  // Check if it's lunch time (12:00 PM - 2:00 PM)
+  const currentHour = Math.floor(gameTime / 60) % 24
+  const isLunchTime = currentHour >= 12 && currentHour < 14
 
-  const handleOrderLunch = (lunch: LunchOption) => {
-    // Check if lunch has already been eaten today by checking if isLunchInProgress is false and current hour is past lunch time
-    const hasEatenLunchToday = gameState.day === localStorage.getItem("lastLunchDay") && gameTime.hour > 14
+  const currentLunchItem = lunchItems.find((item) => item.id === lunchItemEatenId)
+  const selectedLocationData = lunchLocations.find((loc) => loc.id === selectedLocation)
+  const selectedItemData = lunchItems.find((item) => item.id === selectedItem)
 
-    if (isLunchTime && gameState.money >= lunch.price && !hasEatenLunchToday && !isLunchInProgress) {
-      onOrderLunch(lunch)
-      localStorage.setItem("lastLunchDay", gameState.day.toString()) // Mark that lunch has been eaten for this day
+  const handleEatLunch = () => {
+    if (selectedLocation && selectedItem && isLunchTime && !hasEatenLunch) {
+      onLunch(selectedLocation, selectedItem)
     }
   }
 
-  const currentLunchOptions = selectedLocationId ? lunchOptions[selectedLocationId] : []
-  const currentLunchLocation = selectedLocationId ? lunchLocations.find((loc) => loc.id === selectedLocationId) : null
+  // Filter items by location type for more realistic choices
+  const getItemsForLocation = (locationId: string) => {
+    switch (locationId) {
+      case "canteen":
+        return lunchItems.filter((item) => ["chicken-rice", "nasi-lemak", "laksa", "sandwich"].includes(item.id))
+      case "kopitiam":
+        return lunchItems.filter((item) => ["chicken-rice", "nasi-lemak", "laksa", "dim-sum"].includes(item.id))
+      case "cafe":
+        return lunchItems.filter((item) => ["sandwich", "salad", "pasta", "burger"].includes(item.id))
+      case "food-court":
+        return lunchItems.filter((item) => ["ramen", "pad-thai", "bibimbap", "pho", "dim-sum"].includes(item.id))
+      case "restaurant":
+        return lunchItems.filter((item) => ["sushi", "pasta", "pizza", "fish-chips", "burger"].includes(item.id))
+      case "delivery":
+        return lunchItems // All items available for delivery
+      default:
+        return lunchItems
+    }
+  }
 
-  // Determine if lunch has been eaten today for disabling buttons
-  const hasEatenLunchToday = gameState.day === Number.parseInt(localStorage.getItem("lastLunchDay") || "0")
+  const availableItems = selectedLocation ? getItemsForLocation(selectedLocation) : []
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 dark:from-gray-900 dark:to-gray-800">
+      {/* Header Section */}
+      <div className="bg-gradient-to-r from-orange-400 to-amber-500 text-white p-6 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Utensils className="w-8 h-8" />
             <div>
-              {selectedLocationId && !isLunchInProgress && (
-                <Button variant="ghost" size="sm" onClick={() => setSelectedLocationId(null)} className="mb-2">
-                  <ArrowLeft className="w-4 h-4 mr-2" /> Back to Locations
-                </Button>
-              )}
-              <CardTitle className="flex items-center gap-2">
-                <Coffee className="w-5 h-5" />
-                {selectedLocationId ? currentLunchLocation?.name : "Lunch Menu - One North"}
-              </CardTitle>
-              <CardDescription>
-                {isLunchTime
-                  ? hasEatenLunchToday
-                    ? "You've already had lunch today!"
-                    : isLunchInProgress
-                      ? "Enjoying your meal..."
-                      : selectedLocationId
-                        ? currentLunchLocation?.description
-                        : "Lunch time! Choose your dining location."
-                  : "Lunch available from 12:00 PM - 2:00 PM"}
-              </CardDescription>
+              <h1 className="text-2xl font-bold">Lunch Time!</h1>
+              <p className="text-orange-100">Fuel up for the afternoon</p>
             </div>
-            {!selectedLocationId && (
-              <Badge variant={isLunchTime ? "default" : "secondary"}>
-                {isLunchTime ? "🟢 Lunch Hours" : "🔴 Off Hours"}
-              </Badge>
-            )}
           </div>
-        </CardHeader>
-        <CardContent>
-          {isLunchInProgress && (
-            <ProgressDetail
-              taskName={`Lunch at ${currentLunchLocation?.name || "a place"}`}
-              progress={lunchProgress}
-              duration={10} // Fixed duration for lunch, adjust as needed
-              taskType="lunch"
-              emoji={selectedLunchEmoji} // Pass the selected lunch emoji
-            />
-          )}
+          <div className="text-right">
+            <div className="flex items-center space-x-2 text-lg font-semibold">
+              <Clock className="w-5 h-5" />
+              <span>{formatGameTime(gameTime)}</span>
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-orange-100">
+              <Coins className="w-4 h-4" />
+              <span>{shopeeCoins} SC available</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
-          {!selectedLocationId ? (
-            // Display lunch locations
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {lunchLocations.map((location) => (
-                <Card
-                  key={location.id}
-                  className={`cursor-pointer hover:shadow-md transition-all ${
-                    !isLunchTime || isLunchInProgress || hasEatenLunchToday ? "opacity-50 grayscale" : ""
-                  }`}
-                  onClick={() =>
-                    isLunchTime && !isLunchInProgress && !hasEatenLunchToday && setSelectedLocationId(location.id)
+      <div className="p-6 space-y-6">
+        {/* Lunch Time Status */}
+        <Card
+          className={`border-2 ${isLunchTime ? "border-green-500 bg-green-50 dark:bg-green-900/20" : "border-red-500 bg-red-50 dark:bg-red-900/20"}`}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Clock className={`w-6 h-6 ${isLunchTime ? "text-green-600" : "text-red-600"}`} />
+                <div>
+                  <h3
+                    className={`font-semibold ${isLunchTime ? "text-green-800 dark:text-green-200" : "text-red-800 dark:text-red-200"}`}
+                  >
+                    {isLunchTime ? "Lunch Time is Open!" : "Lunch Time is Closed"}
+                  </h3>
+                  <p
+                    className={`text-sm ${isLunchTime ? "text-green-600 dark:text-green-300" : "text-red-600 dark:text-red-300"}`}
+                  >
+                    {isLunchTime ? "Available from 12:00 PM - 2:00 PM" : "Come back between 12:00 PM - 2:00 PM"}
+                  </p>
+                </div>
+              </div>
+              <Badge variant={isLunchTime ? "default" : "destructive"} className="text-sm px-3 py-1">
+                {isLunchTime ? "OPEN" : "CLOSED"}
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+
+        {hasEatenLunch ? (
+          /* Already Eaten Section */
+          <Card className="border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20">
+            <CardContent className="p-8 text-center space-y-6">
+              <div className="text-8xl mb-4">{currentLunchItem?.emoji || "🍽️"}</div>
+              <div>
+                <h2 className="text-2xl font-bold text-orange-800 dark:text-orange-200 mb-2">Lunch Complete!</h2>
+                <p className="text-lg text-orange-600 dark:text-orange-300 mb-4">
+                  You enjoyed {currentLunchItem?.name || "a delicious meal"}
+                </p>
+                <div className="inline-flex items-center space-x-2 bg-white dark:bg-gray-800 rounded-full px-4 py-2 shadow-md">
+                  <span className="text-green-600 font-semibold">+{currentLunchItem?.energyGain || 0} Energy</span>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Come back tomorrow for more delicious options!</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Location Selection */}
+            <Card className="h-fit">
+              <CardHeader className="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-t-lg">
+                <CardTitle className="flex items-center space-x-2">
+                  <MapPin className="w-5 h-5" />
+                  <span>Choose Your Dining Location</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <ScrollArea className="h-[300px] pr-4">
+                  <div className="grid grid-cols-1 gap-3">
+                    {lunchLocations.map((location: LunchLocation) => (
+                      <Button
+                        key={location.id}
+                        variant={selectedLocation === location.id ? "default" : "outline"}
+                        onClick={() => {
+                          setSelectedLocation(location.id)
+                          setSelectedItem(null) // Reset item selection when location changes
+                        }}
+                        className={`flex items-center justify-start h-auto py-4 px-4 ${
+                          !isLunchTime ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                        disabled={!isLunchTime || hasEatenLunch}
+                      >
+                        <span className="text-3xl mr-3">{location.emoji}</span>
+                        <div className="text-left">
+                          <div className="font-semibold">{location.name}</div>
+                          <div className="text-xs opacity-75">
+                            {getItemsForLocation(location.id).length} items available
+                          </div>
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+
+            {/* Menu Selection */}
+            <Card className="h-fit">
+              <CardHeader className="bg-gradient-to-r from-green-500 to-teal-600 text-white rounded-t-lg">
+                <CardTitle className="flex items-center space-x-2">
+                  <Utensils className="w-5 h-5" />
+                  <span>{selectedLocationData ? `${selectedLocationData.name} Menu` : "Select a Location First"}</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                {selectedLocation ? (
+                  <ScrollArea className="h-[300px] pr-4">
+                    <div className="grid grid-cols-1 gap-3">
+                      {availableItems.map((item: LunchItem) => (
+                        <Button
+                          key={item.id}
+                          variant={selectedItem === item.id ? "default" : "outline"}
+                          onClick={() => setSelectedItem(item.id)}
+                          className={`flex items-center justify-between h-auto py-4 px-4 ${
+                            !isLunchTime || shopeeCoins < item.price ? "opacity-50 cursor-not-allowed" : ""
+                          }`}
+                          disabled={!isLunchTime || hasEatenLunch || shopeeCoins < item.price}
+                        >
+                          <div className="flex items-center">
+                            <span className="text-3xl mr-3">{item.emoji}</span>
+                            <div className="text-left">
+                              <div className="font-semibold">{item.name}</div>
+                              <div className="text-xs text-green-600">+{item.energyGain} Energy</div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-orange-600">{item.price} SC</div>
+                            {shopeeCoins < item.price && <div className="text-xs text-red-500">Not enough SC</div>}
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center text-gray-500 dark:text-gray-400">
+                    <div className="text-center">
+                      <MapPin className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>Please select a dining location to view the menu</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Order Summary & Action */}
+        {!hasEatenLunch && selectedLocation && selectedItem && (
+          <Card className="border-2 border-orange-300 bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-orange-800 dark:text-orange-200">Order Summary</h3>
+                <Badge variant="secondary" className="text-sm">
+                  {isLunchTime ? "Ready to Order" : "Lunch Closed"}
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="flex items-center space-x-3 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                  <span className="text-2xl">{selectedLocationData?.emoji}</span>
+                  <div>
+                    <p className="font-semibold">Location</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{selectedLocationData?.name}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                  <span className="text-2xl">{selectedItemData?.emoji}</span>
+                  <div>
+                    <p className="font-semibold">{selectedItemData?.name}</p>
+                    <p className="text-sm text-green-600">+{selectedItemData?.energyGain} Energy</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="text-lg font-bold text-orange-700 dark:text-orange-300">
+                  Total: {selectedItemData?.price} SC
+                </div>
+                <Button
+                  onClick={handleEatLunch}
+                  disabled={
+                    !isLunchTime ||
+                    hasEatenLunch ||
+                    !selectedLocation ||
+                    !selectedItem ||
+                    (selectedItemData && shopeeCoins < selectedItemData.price)
                   }
+                  className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white px-8 py-3 text-lg font-semibold shadow-lg"
+                  size="lg"
                 >
-                  <CardContent className="p-4 text-center">
-                    <span className="text-4xl mb-2 block">{location.emoji}</span>
-                    <h3 className="font-medium text-lg">{location.name}</h3>
-                    <p className="text-sm text-gray-600">{location.description}</p>
-                    {(!isLunchTime || isLunchInProgress || hasEatenLunchToday) && (
-                      <Badge className="mt-2" variant="secondary">
-                        {isLunchInProgress
-                          ? "Lunch in Progress"
-                          : hasEatenLunchToday
-                            ? "Lunch Eaten"
-                            : "Not Lunch Time"}
-                      </Badge>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            // Display lunch options for selected location
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-              {currentLunchOptions.map((lunch) => (
-                <Card
-                  key={lunch.id}
-                  className={`cursor-pointer hover:shadow-md transition-all ${
-                    !isLunchTime || hasEatenLunchToday || isLunchInProgress ? "opacity-50 grayscale" : ""
-                  }`}
-                >
-                  <CardContent className="p-3">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">{lunch.emoji}</span>
-                        <h3 className="font-medium text-sm">{lunch.name}</h3>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        {lunch.price} SC
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center text-xs mb-2">
-                      <span className="text-green-600">⚡ +{lunch.energy} Energy</span>
-                    </div>
-                    <Button
-                      size="sm"
-                      className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:text-gray-500"
-                      onClick={() => handleOrderLunch(lunch)}
-                      disabled={
-                        !isLunchTime || gameState.money < lunch.price || hasEatenLunchToday || isLunchInProgress
-                      }
-                    >
-                      {!isLunchTime
-                        ? "⏰ Not Lunch Time"
-                        : hasEatenLunchToday
-                          ? "✅ Lunch Eaten"
-                          : isLunchInProgress
-                            ? "⏳ In Progress"
-                            : gameState.money < lunch.price
-                              ? "💸 Can't Afford"
-                              : "🛒 Order"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {!isLunchTime && (
-            <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-lg text-center">
-              <Coffee className="w-8 h-8 mx-auto mb-2 text-orange-500" />
-              <p className="text-orange-700 font-medium">Lunch service available from 12:00 PM - 2:00 PM</p>
-              <p className="text-orange-600 text-sm mt-1">🕐 Current time: {formatGameTime(gameTime)}</p>
-              <p className="text-orange-500 text-xs mt-1">Browse the menu above to plan your lunch!</p>
-            </div>
-          )}
-          {isLunchTime && hasEatenLunchToday && !isLunchInProgress && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-              <p className="text-green-700 font-medium">You've enjoyed your lunch for today!</p>
-              <p className="text-green-600 text-sm mt-1">Come back tomorrow for more delicious options.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  {!isLunchTime ? "Lunch Closed" : hasEatenLunch ? "Already Eaten" : "Enjoy Your Meal! 🍽️"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   )
 }
-
-export default LunchTab

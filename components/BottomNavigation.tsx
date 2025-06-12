@@ -1,43 +1,32 @@
 "use client"
 
-import type React from "react"
-import { Building2, CheckSquare, MessageCircle, Map, Coffee, User, ShoppingCart, Globe } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import type { TabType, BottomNavigationTab } from "@/types/game"
 
 interface BottomNavigationProps {
-  activeTab: string
-  onTabChange: (tab: string) => void
-  disabled: boolean // New prop
+  activeTab: TabType
+  setActiveTab: (tab: TabType) => void
+  tabs: BottomNavigationTab[]
+  disabled: boolean // New prop to disable navigation
 }
 
-export const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabChange, disabled }) => {
-  const tabs = [
-    { id: "office", icon: Building2, label: "Office" },
-    { id: "tasks", icon: CheckSquare, label: "Tasks" },
-    { id: "seatalk", icon: MessageCircle, label: "SeaTalk" },
-    { id: "navigate", icon: Map, label: "Navigate" },
-    { id: "lunch", icon: Coffee, label: "Lunch" },
-    { id: "character", icon: User, label: "Character" },
-    { id: "shop", icon: ShoppingCart, label: "Shop" },
-    { id: "portal", icon: Globe, label: "Portal" },
-  ]
-
+export function BottomNavigation({ activeTab, setActiveTab, tabs, disabled }: BottomNavigationProps) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2">
-      <div className="flex justify-around items-center max-w-md mx-auto">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => onTabChange(tab.id)}
-            className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
-              activeTab === tab.id ? "text-orange-500 bg-orange-50" : "text-gray-500"
-            } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`} // Apply disabled style
-            disabled={disabled} // Disable button
-          >
-            <tab.icon className="w-5 h-5" />
-            <span className="text-xs">{tab.label}</span>
-          </button>
-        ))}
-      </div>
+    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-around p-2 shadow-lg z-50">
+      {tabs.map((tab) => (
+        <Button
+          key={tab.id}
+          variant="ghost"
+          className={`flex flex-col items-center text-xs px-2 py-1 h-auto ${
+            activeTab === tab.id ? "text-orange-500 dark:text-orange-400" : "text-gray-600 dark:text-gray-300"
+          }`}
+          onClick={() => setActiveTab(tab.id)}
+          disabled={disabled} // Apply disabled prop
+        >
+          <span className="text-xl mb-1">{tab.icon}</span>
+          <span>{tab.name}</span>
+        </Button>
+      ))}
     </div>
   )
 }

@@ -1,1084 +1,516 @@
-import type {
-  Role,
-  Task,
-  LunchOption,
-  ShopProduct,
-  LunchLocation,
-  OrgNode,
-  RandomEvent,
-  CustomizationItem,
-  InternalThought,
-} from "../types/game"
+import { type GameState, TabType } from "@/types/game"
 
-export const roles: Role[] = [
-  { title: "Associate", experienceRequired: 0, salary: 300, description: "Entry-level position" },
-  { title: "Senior Associate", experienceRequired: 100, salary: 450, description: "Experienced team member" },
-  { title: "Assistant Manager", experienceRequired: 250, salary: 600, description: "Junior management role" },
-  { title: "Manager", experienceRequired: 500, salary: 800, description: "Team leadership position" },
-  { title: "Senior Manager", experienceRequired: 1000, salary: 1200, description: "Department oversight" },
-  { title: "Director", experienceRequired: 2000, salary: 1800, description: "Strategic leadership" },
-  { title: "VP", experienceRequired: 4000, salary: 2500, description: "Executive leadership" },
-  { title: "C-Level", experienceRequired: 8000, salary: 4000, description: "Top executive" },
-]
-
-export const tasks: Task[] = [
-  // Basic Tasks (Level 0+)
-  {
-    id: "email",
-    name: "Check Emails",
-    description: "Process daily emails and respond to urgent matters",
-    energyCost: 10,
-    productivityGain: 15,
-    burnoutGain: 5, // Low burnout
-    experienceGain: 5,
-    moneyGain: 0,
-    duration: 9, // Increased duration (3 * 3)
-    emoji: "📧",
-    available: () => true,
+export const initialGameState: GameState = {
+  gameTime: 9 * 60, // Start at 9:00 AM (in minutes from midnight)
+  exp: 0,
+  level: 1,
+  shopeeCoins: 100, // Changed from 5000 dollars to 100 ShopeeCoins
+  stats: {
+    energy: 80,
+    productivity: 70,
+    burnout: 20, // Lower burnout is better
   },
-  {
-    id: "organize-desk",
-    name: "Organize Desk",
-    description: "Clean and organize your workspace for better efficiency",
-    energyCost: 8,
-    productivityGain: 12,
-    burnoutGain: 3, // Very low burnout
-    experienceGain: 3,
-    moneyGain: 0,
-    duration: 6, // Increased duration (2 * 3)
-    emoji: "🧹",
-    available: () => true,
-  },
-  {
-    id: "file-documents",
-    name: "File Documents",
-    description: "Sort and file important company documents",
-    energyCost: 12,
-    productivityGain: 18,
-    burnoutGain: 7, // Low burnout
-    experienceGain: 6,
-    moneyGain: 25,
-    duration: 12, // Increased duration (4 * 3)
-    emoji: "🗂️",
-    available: () => true,
-  },
-  {
-    id: "data-entry",
-    name: "Data Entry",
-    description: "Input customer information into the database",
-    energyCost: 15,
-    productivityGain: 20,
-    burnoutGain: 10, // Medium burnout
-    experienceGain: 8,
-    moneyGain: 40,
-    duration: 15, // Increased duration (5 * 3)
-    emoji: "⌨️",
-    available: () => true,
-  },
-  {
-    id: "phone-calls",
-    name: "Customer Calls",
-    description: "Handle customer inquiries and support requests",
-    energyCost: 18,
-    productivityGain: 22,
-    burnoutGain: 12, // Medium burnout
-    experienceGain: 10,
-    moneyGain: 60,
-    duration: 18, // Increased duration (6 * 3)
-    emoji: "📞",
-    available: () => true,
-  },
-
-  // Intermediate Tasks (Level 1+)
-  {
-    id: "report",
-    name: "Write Report",
-    description: "Create detailed analysis report for management",
-    energyCost: 25,
-    productivityGain: 30,
-    burnoutGain: 15, // Medium-high burnout
-    experienceGain: 15,
-    moneyGain: 100,
-    duration: 24, // Increased duration (8 * 3)
-    emoji: "📝",
-    available: (level) => level >= 1,
-  },
-  {
-    id: "meeting",
-    name: "Team Meeting",
-    description: "Collaborate with team members on projects",
-    energyCost: 20,
-    productivityGain: 25,
-    burnoutGain: 10, // Medium burnout
-    experienceGain: 12,
-    moneyGain: 50,
-    duration: 21, // Increased duration (7 * 3)
-    emoji: "👥",
-    available: (level) => level >= 1,
-  },
-  {
-    id: "market-research",
-    name: "Market Research",
-    description: "Analyze market trends and competitor data",
-    energyCost: 22,
-    productivityGain: 28,
-    burnoutGain: 13, // Medium burnout
-    experienceGain: 14,
-    moneyGain: 80,
-    duration: 21, // Increased duration (7 * 3)
-    emoji: "📈",
-    available: (level) => level >= 1,
-  },
-  {
-    id: "social-media",
-    name: "Social Media Management",
-    description: "Update company social media accounts",
-    energyCost: 15,
-    productivityGain: 20,
-    burnoutGain: 9, // Low-medium burnout
-    experienceGain: 10,
-    moneyGain: 45,
-    duration: 15, // Increased duration (5 * 3)
-    emoji: "📱",
-    available: (level) => level >= 1,
-  },
-  {
-    id: "inventory-check",
-    name: "Inventory Check",
-    description: "Count and verify office supplies and equipment",
-    energyCost: 20,
-    productivityGain: 15,
-    burnoutGain: 8, // Low-medium burnout
-    experienceGain: 8,
-    moneyGain: 35,
-    duration: 18, // Increased duration (6 * 3)
-    emoji: "📦",
-    available: (level) => level >= 1,
-  },
-
-  // Advanced Tasks (Level 2+)
-  {
-    id: "presentation",
-    name: "Client Presentation",
-    description: "Present solutions to important clients",
-    energyCost: 35,
-    productivityGain: 40,
-    burnoutGain: 20, // High burnout
-    experienceGain: 25,
-    moneyGain: 200,
-    duration: 30, // Increased duration (10 * 3)
-    emoji: "📊",
-    available: (level) => level >= 2,
-  },
-  {
-    id: "budget-planning",
-    name: "Budget Planning",
-    description: "Create quarterly budget forecasts",
-    energyCost: 30,
-    productivityGain: 35,
-    burnoutGain: 18, // High burnout
-    experienceGain: 20,
-    moneyGain: 150,
-    duration: 27, // Increased duration (9 * 3)
-    emoji: "💰",
-    available: (level) => level >= 2,
-  },
-  {
-    id: "training-session",
-    name: "Training Session",
-    description: "Conduct training for new employees",
-    energyCost: 28,
-    productivityGain: 32,
-    burnoutGain: 16, // Medium-high burnout
-    experienceGain: 22,
-    moneyGain: 120,
-    duration: 24, // Increased duration (8 * 3)
-    emoji: "🧑‍🏫",
-    available: (level) => level >= 2,
-  },
-  {
-    id: "vendor-negotiation",
-    name: "Vendor Negotiation",
-    description: "Negotiate contracts with suppliers",
-    energyCost: 32,
-    productivityGain: 38,
-    burnoutGain: 22, // High burnout
-    experienceGain: 24,
-    moneyGain: 180,
-    duration: 30, // Increased duration (10 * 3)
-    emoji: "🤝",
-    available: (level) => level >= 2,
-  },
-  {
-    id: "quality-audit",
-    name: "Quality Audit",
-    description: "Review and audit department processes",
-    energyCost: 26,
-    productivityGain: 30,
-    burnoutGain: 15, // Medium-high burnout
-    experienceGain: 18,
-    moneyGain: 110,
-    duration: 27, // Increased duration (9 * 3)
-    emoji: "✅",
-    available: (level) => level >= 2,
-  },
-
-  // Expert Tasks (Level 3+)
-  {
-    id: "strategy",
-    name: "Strategic Planning",
-    description: "Develop long-term business strategies",
-    energyCost: 40,
-    productivityGain: 50,
-    burnoutGain: 25, // Very high burnout
-    experienceGain: 35,
-    moneyGain: 300,
-    duration: 36, // Increased duration (12 * 3)
-    emoji: "🧠",
-    available: (level) => level >= 3,
-  },
-  {
-    id: "product-launch",
-    name: "Product Launch",
-    description: "Coordinate new product launch campaign",
-    energyCost: 45,
-    productivityGain: 55,
-    burnoutGain: 30, // Very high burnout
-    experienceGain: 40,
-    moneyGain: 400,
-    duration: 42, // Increased duration (14 * 3)
-    emoji: "🚀",
-    available: (level) => level >= 3,
-  },
-  {
-    id: "crisis-management",
-    name: "Crisis Management",
-    description: "Handle urgent company crisis situations",
-    energyCost: 50,
-    productivityGain: 60,
-    burnoutGain: 35, // Extreme burnout
-    experienceGain: 45,
-    moneyGain: 500,
-    duration: 45, // Increased duration (15 * 3)
-    emoji: "🚨",
-    available: (level) => level >= 3,
-  },
-  {
-    id: "merger-analysis",
-    name: "Merger Analysis",
-    description: "Analyze potential company mergers",
-    energyCost: 42,
-    productivityGain: 52,
-    burnoutGain: 28, // Very high burnout
-    experienceGain: 38,
-    moneyGain: 350,
-    duration: 39, // Increased duration (13 * 3)
-    emoji: "🤝",
-    available: (level) => level >= 3,
-  },
-  {
-    id: "board-presentation",
-    name: "Board Presentation",
-    description: "Present quarterly results to board members",
-    energyCost: 48,
-    productivityGain: 58,
-    burnoutGain: 32, // Extreme burnout
-    experienceGain: 42,
-    moneyGain: 450,
-    duration: 48, // Increased duration (16 * 3)
-    emoji: "🧑‍💼",
-    available: (level) => level >= 3,
-  },
-
-  // Senior Tasks (Level 4+)
-  {
-    id: "acquisition-deal",
-    name: "Acquisition Deal",
-    description: "Lead company acquisition negotiations",
-    energyCost: 55,
-    productivityGain: 65,
-    burnoutGain: 40, // Extreme burnout
-    experienceGain: 50,
-    moneyGain: 600,
-    duration: 54, // Increased duration (18 * 3)
-    emoji: "💎",
-    available: (level) => level >= 4,
-  },
-  {
-    id: "ipo-preparation",
-    name: "IPO Preparation",
-    description: "Prepare company for public offering",
-    energyCost: 60,
-    productivityGain: 70,
-    burnoutGain: 45, // Max burnout
-    experienceGain: 55,
-    moneyGain: 800,
-    duration: 60, // Increased duration (20 * 3)
-    emoji: "📈",
-    available: (level) => level >= 4,
-  },
-  {
-    id: "global-expansion",
-    name: "Global Expansion",
-    description: "Plan international market expansion",
-    energyCost: 52,
-    productivityGain: 62,
-    burnoutGain: 38, // Extreme burnout
-    experienceGain: 48,
-    moneyGain: 550,
-    duration: 51, // Increased duration (17 * 3)
-    emoji: "🌍",
-    available: (level) => level >= 4,
-  },
-
-  // Executive Tasks (Level 5+)
-  {
-    id: "ceo-meeting",
-    name: "CEO Meeting",
-    description: "Strategic discussion with company leadership",
-    energyCost: 65,
-    productivityGain: 75,
-    burnoutGain: 50, // Max burnout
-    experienceGain: 60,
-    moneyGain: 1000,
-    duration: 66, // Increased duration (22 * 3)
-    emoji: "👑",
-    available: (level) => level >= 5,
-  },
-  {
-    id: "industry-conference",
-    name: "Industry Conference",
-    description: "Represent company at major industry event",
-    energyCost: 58,
-    productivityGain: 68,
-    burnoutGain: 42, // Extreme burnout
-    experienceGain: 52,
-    moneyGain: 700,
-    duration: 57, // Increased duration (19 * 3)
-    emoji: "🌟",
-    available: (level) => level >= 5,
-  },
-
-  // Recovery/Break Tasks
-  {
-    id: "coffee",
-    name: "Coffee Break",
-    description: "Take a refreshing break to recharge",
-    energyCost: -30,
-    productivityGain: 5,
-    burnoutGain: -15, // Reduces burnout
-    experienceGain: 0,
-    moneyGain: -10,
-    duration: 6, // Increased duration (2 * 3)
-    emoji: "☕",
-    available: () => true,
-  },
-  {
-    id: "meditation",
-    name: "Meditation Break",
-    description: "Practice mindfulness to reduce stress",
-    energyCost: -25,
-    productivityGain: 8,
-    burnoutGain: -20, // Reduces burnout significantly
-    experienceGain: 2,
-    moneyGain: 0,
-    duration: 9, // Increased duration (3 * 3)
-    emoji: "🧘",
-    available: () => true,
-  },
-  {
-    id: "walk",
-    name: "Office Walk",
-    description: "Take a walk around the office building",
-    energyCost: -20,
-    productivityGain: 10,
-    burnoutGain: -12, // Reduces burnout
-    experienceGain: 1,
-    moneyGain: 0,
-    duration: 6, // Increased duration (2 * 3)
-    emoji: "🚶",
-    available: () => true,
-  },
-  {
-    id: "rest",
-    name: "Go Home Early",
-    description: "Leave work early to rest and recover",
-    energyCost: -50,
-    productivityGain: -10,
-    burnoutGain: -30, // Reduces burnout a lot
-    experienceGain: 0,
-    moneyGain: -50,
-    duration: 15, // Increased duration (5 * 3)
-    emoji: "🏠",
-    available: () => true,
-  },
-  {
-    id: "game",
-    name: "Office Games",
-    description: "Play games with colleagues to boost morale",
-    energyCost: -20,
-    productivityGain: 10,
-    burnoutGain: -20, // Reduces burnout
-    experienceGain: 5,
-    moneyGain: 0,
-    duration: 12, // Increased duration (4 * 3)
-    emoji: "🎮",
-    available: (level) => level >= 2,
-  },
-  {
-    id: "networking",
-    name: "Office Networking",
-    description: "Build relationships with colleagues",
-    energyCost: -15,
-    productivityGain: 15,
-    burnoutGain: -10, // Reduces burnout
-    experienceGain: 8,
-    moneyGain: 0,
-    duration: 9, // Increased duration (3 * 3)
-    emoji: "🤝",
-    available: (level) => level >= 1,
-  },
-
-  // Creative Tasks
-  {
-    id: "design-review",
-    name: "Design Review",
-    description: "Review and approve marketing designs",
-    energyCost: 24,
-    productivityGain: 28,
-    burnoutGain: 12,
-    experienceGain: 16,
-    moneyGain: 90,
-    duration: 21, // Increased duration (7 * 3)
-    emoji: "🎨",
-    available: (level) => level >= 2,
-  },
-  {
-    id: "video-conference",
-    name: "Video Conference",
-    description: "Host important client video calls",
-    energyCost: 26,
-    productivityGain: 30,
-    burnoutGain: 14,
-    experienceGain: 18,
-    moneyGain: 100,
-    duration: 24, // Increased duration (8 * 3)
-    emoji: "📹",
-    available: (level) => level >= 1,
-  },
-  {
-    id: "system-update",
-    name: "System Update",
-    description: "Update and maintain office systems",
-    energyCost: 20,
-    productivityGain: 25,
-    burnoutGain: 10,
-    experienceGain: 12,
-    moneyGain: 70,
-    duration: 18, // Increased duration (6 * 3)
-    emoji: "⚙️",
-    available: (level) => level >= 1,
-  },
-]
-
-export const lunchLocations: LunchLocation[] = [
-  {
-    id: "hawker-center",
-    name: "Hawker Center",
-    description: "Authentic local delights at affordable prices.",
-    emoji: "🍜",
-  },
-  {
-    id: "food-court",
-    name: "Food Court",
-    description: "Variety of cuisines in a casual setting.",
-    emoji: "🍽️",
-  },
-  {
-    id: "cafe",
-    name: "Cozy Cafe",
-    description: "Relaxed atmosphere with sandwiches and pastries.",
-    emoji: "☕",
-  },
-  {
-    id: "restaurant",
-    name: "Fine Dining",
-    description: "Upscale experience with gourmet meals.",
-    emoji: "🍷",
-  },
-  {
-    id: "healthy-eatery",
-    name: "Healthy Bites",
-    description: "Fresh salads and nutritious bowls.",
-    emoji: "🥗",
-  },
-  {
-    id: "fast-food",
-    name: "Quick Bites",
-    description: "Fast and convenient options for a quick meal.",
-    emoji: "🍔",
-  },
-]
-
-export const lunchOptions: Record<string, LunchOption[]> = {
-  "hawker-center": [
-    { id: 1, name: "Hainanese Chicken Rice", price: 4.5, energy: 25, emoji: "🍚" },
-    { id: 2, name: "Char Kway Teow", price: 5.0, energy: 30, emoji: "🍝" },
-    { id: 3, name: "Laksa", price: 4.8, energy: 28, emoji: "🌶️" },
-    { id: 4, name: "Bak Chor Mee", price: 4.2, energy: 22, emoji: "🍜" },
-    { id: 5, name: "Wonton Mee", price: 4.0, energy: 20, emoji: "🥟" },
-    { id: 6, name: "Nasi Lemak", price: 3.5, energy: 24, emoji: "🥥" },
-    { id: 7, name: "Mee Goreng", price: 4.0, energy: 26, emoji: "🌶️" },
-    { id: 8, name: "Roti Prata", price: 2.5, energy: 18, emoji: "🥞" },
-    { id: 9, name: "Popiah", price: 3.0, energy: 15, emoji: "🌯" },
-    { id: 10, name: "Oyster Omelette", price: 6.0, energy: 35, emoji: "🍳" },
-  ],
-  "food-court": [
-    { id: 11, name: "Korean BBQ Bowl", price: 9.0, energy: 35, emoji: "🍖" },
-    { id: 12, name: "Japanese Bento Set", price: 10.5, energy: 30, emoji: "🍱" },
-    { id: 13, name: "Western Grill", price: 11.0, energy: 40, emoji: "🥩" },
-    { id: 14, name: "Indian Curry Rice", price: 7.5, energy: 32, emoji: "🍛" },
-    { id: 15, name: "Vietnamese Pho", price: 8.0, energy: 28, emoji: "🍲" },
-    { id: 16, name: "Thai Green Curry", price: 8.5, energy: 30, emoji: "🥥" },
-    { id: 17, name: "Chinese Stir-fry", price: 7.0, energy: 27, emoji: "🥢" },
-    { id: 18, name: "Pasta Station", price: 9.5, energy: 33, emoji: "🍝" },
-    { id: 19, name: "Salad Bar", price: 6.5, energy: 20, emoji: "🥗" },
-    { id: 20, name: "Soup & Bread", price: 5.5, energy: 18, emoji: "🥣" },
-  ],
-  cafe: [
-    { id: 21, name: "Club Sandwich", price: 8.0, energy: 25, emoji: "🥪" },
-    { id: 22, name: "Croissant & Coffee", price: 6.5, energy: 20, emoji: "🥐" },
-    { id: 23, name: "Avocado Toast", price: 9.0, energy: 22, emoji: "🥑" },
-    { id: 24, name: "Quiche Lorraine", price: 7.0, energy: 23, emoji: "🥧" },
-    { id: 25, name: "Muffin & Tea", price: 5.0, energy: 18, emoji: "🧁" },
-    { id: 26, name: "Smoothie Bowl", price: 10.0, energy: 28, emoji: "🍓" },
-    { id: 27, name: "Bagel with Cream Cheese", price: 6.0, energy: 20, emoji: "🥯" },
-    { id: 28, name: "Pancakes with Syrup", price: 9.5, energy: 30, emoji: "🥞" },
-    { id: 29, name: "Espresso & Pastry", price: 7.0, energy: 22, emoji: "☕" },
-    { id: 30, name: "Yogurt Parfait", price: 7.5, energy: 15, emoji: "🍦" },
-  ],
-  restaurant: [
-    { id: 31, name: "Grilled Salmon", price: 25.0, energy: 40, emoji: "🐟" },
-    { id: 32, name: "Steak Frites", price: 30.0, energy: 45, emoji: "🥩" },
-    { id: 33, name: "Truffle Pasta", price: 22.0, energy: 38, emoji: "🍝" },
-    { id: 34, name: "Lobster Bisque", price: 18.0, energy: 30, emoji: "🥣" },
-    { id: 35, name: "Duck Confit", price: 28.0, energy: 42, emoji: "🦆" },
-    { id: 36, name: "Wagyu Burger", price: 20.0, energy: 35, emoji: "🍔" },
-    { id: 37, name: "Seafood Paella", price: 26.0, energy: 40, emoji: "🥘" },
-    { id: 38, name: "Lamb Shank", price: 29.0, energy: 43, emoji: "🍖" },
-    { id: 39, name: "Vegetable Risotto", price: 19.0, energy: 32, emoji: "🍚" },
-    { id: 40, name: "Chocolate Lava Cake", price: 12.0, energy: 10, emoji: "🍫" },
-  ],
-  "healthy-eatery": [
-    { id: 41, name: "Quinoa Salad", price: 12.0, energy: 20, emoji: "🥗" },
-    { id: 42, name: "Chicken Breast & Veggies", price: 14.0, energy: 25, emoji: "🍗" },
-    { id: 43, name: "Lentil Soup", price: 9.0, energy: 18, emoji: "🥣" },
-    { id: 44, name: "Tofu Stir-fry", price: 11.0, energy: 22, emoji: "🥢" },
-    { id: 45, name: "Acai Bowl", price: 10.0, energy: 15, emoji: "🍇" },
-    { id: 46, name: "Whole Wheat Wrap", price: 8.5, energy: 18, emoji: "🌯" },
-    { id: 47, name: "Green Juice", price: 7.0, energy: 10, emoji: "🥬" },
-    { id: 48, name: "Vegan Burger", price: 13.0, energy: 24, emoji: "🍔" },
-    { id: 49, name: "Fruit Platter", price: 7.5, energy: 12, emoji: "🍉" },
-    { id: 50, name: "Oatmeal with Berries", price: 6.0, energy: 15, emoji: "🥣" },
-  ],
-  "fast-food": [
-    { id: 51, name: "Classic Burger", price: 7.0, energy: 28, emoji: "🍔" },
-    { id: 52, name: "Crispy Chicken Sandwich", price: 7.5, energy: 30, emoji: "🍗" },
-    { id: 53, name: "Large Fries", price: 3.0, energy: 15, emoji: "🍟" },
-    { id: 54, name: "Chicken Nuggets (6 pcs)", price: 6.0, energy: 25, emoji: "🍗" },
-    { id: 55, name: "Soft Drink", price: 2.0, energy: 5, emoji: "🥤" },
-    { id: 56, name: "Fish Burger", price: 6.5, energy: 26, emoji: "🍔" },
-    { id: 57, name: "Onion Rings", price: 3.5, energy: 18, emoji: "🧅" },
-    { id: 58, name: "Milkshake", price: 4.0, energy: 10, emoji: "🍦" },
-    { id: 59, name: "Cheeseburger", price: 7.2, energy: 29, emoji: "🍔" },
-    { id: 60, name: "Spicy Chicken Wrap", price: 8.0, energy: 32, emoji: "🌯" },
-  ],
-}
-
-export const characterCustomizationOptions: Record<string, CustomizationItem[]> = {
-  gender: [
-    { id: "neutral", name: "Neutral", price: 0, unlocked: true, emoji: "👤" },
-    { id: "male", name: "Male", price: 0, unlocked: true, emoji: "👨" },
-    { id: "female", name: "Female", price: 0, unlocked: true, emoji: "👩" },
-  ],
-  skinColor: [
-    { id: "light", name: "Light", price: 0, unlocked: true, color: "#FCE5CD", emoji: "🏻" },
-    { id: "medium", name: "Medium", price: 0, unlocked: true, color: "#D2A679", emoji: "🏽" },
-    { id: "dark", name: "Dark", price: 0, unlocked: true, color: "#8B572A", emoji: "🏾" },
-  ],
-  hairStyle: [
-    { id: "short-dark", name: "Short Dark", price: 0, unlocked: true, color: "#333333", shape: "short", emoji: "💇" },
+  tasks: [
     {
-      id: "long-brown",
-      name: "Long Brown",
-      price: 15,
-      unlocked: false,
-      color: "#8B4513",
-      shape: "long",
-      emoji: "💇‍♀️",
+      id: "task-1",
+      name: "Review PRs",
+      description: "Review pending pull requests from teammates.",
+      emoji: "🔍", // Added emoji
+      progress: 0,
+      targetProgress: 100,
+      rewardExp: 20,
+      rewardCoins: 10,
+      energyCost: 10,
+      isCompleted: false,
     },
     {
-      id: "curly-blonde",
-      name: "Curly Blonde",
-      price: 20,
-      unlocked: false,
-      color: "#F5DEB3",
-      shape: "curly",
-      emoji: "🦱",
+      id: "task-2",
+      name: "Write Documentation",
+      description: "Update project documentation for new features.",
+      emoji: "📝", // Added emoji
+      progress: 0,
+      targetProgress: 100,
+      rewardExp: 30,
+      rewardCoins: 15,
+      energyCost: 15,
+      isCompleted: false,
     },
     {
-      id: "ponytail-black",
-      name: "Ponytail Black",
-      price: 18,
-      unlocked: false,
-      color: "#000000",
-      shape: "ponytail",
-      emoji: "👱‍♀️",
-    },
-  ],
-  makeup: [
-    { id: "none", name: "None", price: 0, unlocked: true, emoji: "✨" },
-    { id: "light-blush", name: "Light Blush", price: 5, unlocked: false, emoji: "😊" },
-    { id: "bold-lips", name: "Bold Lips", price: 8, unlocked: false, emoji: "💄" },
-    { id: "smoky-eyes", name: "Smoky Eyes", price: 12, unlocked: false, emoji: "👁️" },
-  ],
-  tops: [
-    { id: "business-shirt", name: "Business Shirt", price: 0, unlocked: true, color: "#ADD8E6", emoji: "👔" }, // Light Blue
-    { id: "polo-shirt", name: "Polo Shirt", price: 10, unlocked: false, color: "#90EE90", emoji: "👕" }, // Light Green
-    { id: "blazer", name: "Formal Blazer", price: 30, unlocked: false, color: "#4682B4", emoji: "🧥" }, // Steel Blue
-    { id: "tshirt", name: "T-Shirt", price: 5, unlocked: false, color: "#F0F0F0", emoji: "👚" }, // Light Gray
-    { id: "sweater", name: "Sweater", price: 15, unlocked: false, color: "#DDA0DD", emoji: "🧶" }, // Plum
-  ],
-  bottoms: [
-    { id: "formal-pants", name: "Formal Pants", price: 0, unlocked: true, color: "#556B2F", emoji: "👖" }, // Olive Green
-    { id: "jeans", name: "Smart Jeans", price: 12, unlocked: false, color: "#4682B4", emoji: "👖" }, // Steel Blue
-    { id: "skirt", name: "Pencil Skirt", price: 15, unlocked: false, color: "#800000", emoji: "👗" }, // Maroon
-    { id: "shorts", name: "Casual Shorts", price: 8, unlocked: false, color: "#A9A9A9", emoji: "🩳" }, // Dark Gray
-  ],
-  shoes: [
-    { id: "dress-shoes", name: "Dress Shoes", price: 0, unlocked: true, color: "#8B4513", emoji: "👞" }, // Saddle Brown
-    { id: "sneakers", name: "White Sneakers", price: 20, unlocked: false, color: "#FFFFFF", emoji: "👟" }, // White
-    { id: "heels", name: "Heels", price: 18, unlocked: false, color: "#696969", emoji: "👠" }, // Dim Gray
-    { id: "sandals", name: "Sandals", price: 10, unlocked: false, color: "#F4A460", emoji: "👡" }, // Sandy Brown
-  ],
-  accessories: [
-    { id: "none", name: "None", price: 0, unlocked: true, emoji: "🚫" },
-    { id: "glasses", name: "Glasses", price: 7, unlocked: false, emoji: "👓" },
-    { id: "watch", name: "Watch", price: 10, unlocked: false, emoji: "⌚" },
-    { id: "necklace", name: "Necklace", price: 15, unlocked: false, emoji: "💎" },
-  ],
-}
-
-export const shopProducts: Record<string, ShopProduct[]> = {
-  productivity: [
-    {
-      id: "premium-laptop",
-      name: "Premium Laptop",
-      price: 120,
-      image: "laptop",
-      description: "High-performance laptop for faster work completion",
-      effects: { productivity: 15, experience: 0 },
-      duration: "permanent",
-      owned: false,
-      emoji: "💻",
-    },
-    {
-      id: "second-monitor",
-      name: "Second Monitor",
-      price: 35,
-      image: "monitor",
-      description: "Dual-screen setup for improved multitasking",
-      effects: { productivity: 10, experience: 0 },
-      duration: "permanent",
-      owned: false,
-      emoji: "🖥️",
-    },
-    {
-      id: "productivity-app",
-      name: "Productivity Suite",
-      price: 12,
-      image: "app",
-      description: "Premium software for better task management",
-      effects: { productivity: 8, experience: 0 },
-      duration: "permanent",
-      owned: false,
-      emoji: "📊",
-    },
-    {
-      id: "noise-cancelling",
-      name: "Noise-Cancelling Headphones",
-      price: 28,
-      image: "headphones",
-      description: "Block distractions and focus on your work",
-      effects: { productivity: 12, burnout: -5 },
-      duration: "permanent",
-      owned: false,
-      emoji: "🎧",
+      id: "task-3",
+      name: "Fix Bug in Production",
+      description: "Address a critical bug reported by users.",
+      emoji: "🐛", // Added emoji
+      progress: 0,
+      targetProgress: 100,
+      rewardExp: 50,
+      rewardCoins: 25,
+      energyCost: 20,
+      isCompleted: false,
     },
   ],
-  wellness: [
-    {
-      id: "ergonomic-chair",
-      name: "Ergonomic Chair",
-      price: 50,
-      image: "chair",
-      description: "Premium office chair for better posture and comfort",
-      effects: { burnout: -15, energy: 5 },
-      duration: "permanent",
-      owned: false,
-      emoji: "🪑",
-    },
-    {
-      id: "standing-desk",
-      name: "Standing Desk",
-      price: 65,
-      image: "desk",
-      description: "Adjustable desk for sitting or standing work",
-      effects: { burnout: -10, energy: 8 },
-      duration: "permanent",
-      owned: false,
-      emoji: " desks",
-    },
-    {
-      id: "wellness-subscription",
-      name: "Wellness App Subscription",
-      price: 8,
-      image: "wellness",
-      description: "Guided meditation and wellness exercises",
-      effects: { burnout: -20, energy: 0 },
-      duration: "permanent",
-      owned: false,
-      emoji: "🧘",
-    },
-    {
-      id: "office-plant",
-      name: "Office Plant Collection",
-      price: 12,
-      image: "plant",
-      description: "Beautiful plants to improve your workspace",
-      effects: { burnout: -8, productivity: 5 },
-      duration: "permanent",
-      owned: false,
-      emoji: "🪴",
-    },
+  lunchLocations: [
+    { id: "canteen", name: "Office Canteen", emoji: "🍜" },
+    { id: "kopitiam", name: "Nearby Kopitiam", emoji: "☕" },
+    { id: "cafe", name: "Trendy Cafe", emoji: "🥪" },
+    { id: "food-court", name: "Food Court", emoji: "🍱" },
+    { id: "restaurant", name: "Fine Dining", emoji: "🍽️" },
+    { id: "delivery", name: "Food Delivery", emoji: "🚚" },
   ],
-  consumables: [
+  lunchItems: [
+    { id: "chicken-rice", name: "Hainanese Chicken Rice", emoji: "🍚", price: 8, energyGain: 35 },
+    { id: "laksa", name: "Spicy Laksa", emoji: "🌶️", price: 10, energyGain: 40 },
+    { id: "sandwich", name: "Club Sandwich", emoji: "🥪", price: 12, energyGain: 30 },
+    { id: "salad", name: "Caesar Salad", emoji: "🥗", price: 15, energyGain: 25 },
+    { id: "nasi-lemak", name: "Nasi Lemak", emoji: "🍛", price: 7, energyGain: 38 },
+    { id: "ramen", name: "Tonkotsu Ramen", emoji: "🍜", price: 18, energyGain: 45 },
+    { id: "burger", name: "Gourmet Burger", emoji: "🍔", price: 20, energyGain: 42 },
+    { id: "sushi", name: "Sushi Set", emoji: "🍣", price: 25, energyGain: 35 },
+    { id: "pasta", name: "Carbonara Pasta", emoji: "🍝", price: 16, energyGain: 40 },
+    { id: "pizza", name: "Margherita Pizza", emoji: "🍕", price: 22, energyGain: 38 },
+    { id: "pho", name: "Vietnamese Pho", emoji: "🍲", price: 14, energyGain: 42 },
+    { id: "dim-sum", name: "Dim Sum Platter", emoji: "🥟", price: 20, energyGain: 36 },
+    { id: "bibimbap", name: "Korean Bibimbap", emoji: "🍚", price: 17, energyGain: 39 },
+    { id: "pad-thai", name: "Pad Thai", emoji: "🍜", price: 13, energyGain: 37 },
+    { id: "fish-chips", name: "Fish & Chips", emoji: "🐟", price: 19, energyGain: 41 },
+  ],
+  shopItems: [
     {
-      id: "premium-coffee",
-      name: "Premium Coffee Subscription",
-      price: 5,
-      image: "coffee",
-      description: "High-quality coffee delivered to the office",
-      effects: { energy: 20, productivity: 5 },
-      duration: "1 week",
-      owned: false,
+      id: "coffee",
+      name: "Coffee",
+      description: "Boosts productivity but increases burnout.",
       emoji: "☕",
+      price: 30,
+      type: "consumable",
+      effect: { productivity: 20, burnout: 5 },
+      isBought: false,
     },
     {
       id: "energy-drink",
-      name: "Energy Drink Pack",
-      price: 3,
-      image: "energy",
-      description: "Quick energy boost when you need it most",
-      effects: { energy: 30, burnout: 10 },
-      duration: "3 days",
-      owned: false,
+      name: "Energy Drink",
+      description: "Restores energy but increases burnout.",
       emoji: "⚡",
+      price: 40,
+      type: "consumable",
+      effect: { energy: 30, burnout: 10 },
+      isBought: false,
     },
     {
-      id: "healthy-snacks",
-      name: "Healthy Snack Box",
-      price: 4.5,
-      image: "snacks",
-      description: "Nutritious snacks to keep you going",
-      effects: { energy: 15, burnout: -5 },
-      duration: "1 week",
-      owned: false,
-      emoji: "🍎",
+      id: "new-keyboard",
+      name: "Mechanical Keyboard",
+      description: "Increases work efficiency and productivity.",
+      emoji: "⌨️",
+      price: 150,
+      type: "equipment",
+      effect: { workEfficiency: 0.1, productivity: 10 },
+      isBought: false,
     },
     {
-      id: "vitamin-pack",
-      name: "Vitamin Supplement Pack",
-      price: 3.5,
-      image: "vitamins",
-      description: "Daily vitamins for sustained energy",
-      effects: { energy: 10, burnout: -8 },
-      duration: "2 weeks",
-      owned: false,
-      emoji: "💊",
+      id: "shopee-hoodie",
+      name: "Shopee Hoodie",
+      description: "Show your Shopee spirit! Reduces burnout.",
+      emoji: "🍊",
+      price: 80,
+      type: "wardrobe",
+      effect: { burnout: -5 },
+      isBought: false,
+    },
+    {
+      id: "stress-ball",
+      name: "Stress Ball",
+      description: "Helps manage burnout and stress.",
+      emoji: "🥎",
+      price: 20,
+      type: "consumable",
+      effect: { burnout: -15 },
+      isBought: false,
     },
   ],
-  premium: [
+  wardrobe: [], // IDs of owned wardrobe items
+  hasEatenLunch: false,
+  lunchItemEatenId: null,
+  seaTalkMessages: [
     {
-      id: "executive-package",
-      name: "Executive Package",
-      price: 200,
-      image: "executive",
-      description: "Complete premium office setup with all accessories",
-      effects: { productivity: 25, burnout: -20, energy: 15 },
-      duration: "permanent",
-      owned: false,
-      premium: true,
-      emoji: "💼",
+      id: "msg-001",
+      sender: "HR_Bot",
+      content: "Welcome to ShopeeLife! Your journey begins now. Complete tasks to earn EXP and ShopeeCoins!",
+      timestamp: 9 * 60,
     },
     {
-      id: "personal-assistant",
-      name: "Virtual Assistant",
-      price: 150,
-      image: "assistant",
-      description: "AI assistant to handle routine tasks",
-      effects: { productivity: 30, experience: 10 },
-      duration: "permanent",
-      owned: false,
-      premium: true,
-      emoji: "🤖",
+      id: "msg-002",
+      sender: "TeamLead_Alex",
+      content: "Morning team! Don't forget to check the new project brief in Confluence.",
+      timestamp: 9 * 60 + 5,
+    },
+  ],
+  lastQuestResetDay: Math.floor((9 * 60) / (60 * 24)), // Initialize to current day
+  dailyQuests: [], // Will be populated on first load/new day
+  hasClaimedDailyBonus: false,
+  hasShownLunchReminder: false,
+  currentWeather: { type: "Sunny", description: "Sunny" }, // Initial weather
+}
+
+export const gameData = {
+  tasks: initialGameState.tasks,
+  lunchLocations: initialGameState.lunchLocations,
+  lunchItems: initialGameState.lunchItems,
+  shopItems: initialGameState.shopItems,
+  bottomNavigationTabs: [
+    { id: TabType.Office, name: "Office", icon: "🏢" },
+    { id: TabType.Tasks, name: "Tasks", icon: "✅" },
+    { id: TabType.Lunch, name: "Lunch", icon: "🍔" },
+    { id: TabType.Shop, name: "Shop", icon: "🛒" },
+    { id: TabType.Character, name: "Character", icon: "👤" },
+    { id: TabType.SeaTalk, name: "SeaTalk", icon: "💬" },
+    { id: TabType.Navigate, name: "Navigate", icon: "🗺️" },
+    { id: TabType.Portal, name: "Portal", icon: "🌐" }, // Added Portal tab
+  ],
+  locations: [
+    {
+      id: "office",
+      name: "Your Desk",
+      emoji: "🖥️",
+      description: "Your personal workspace where productivity meets procrastination",
+      tabType: TabType.Office,
     },
     {
-      id: "networking-pass",
-      name: "Executive Networking Pass",
-      price: 180,
-      image: "networking",
-      description: "Access to exclusive industry events and connections",
-      effects: { experience: 50, productivity: 10 }, // Added missing effects object
-      duration: "permanent",
-      owned: false,
-      premium: true,
+      id: "meeting-room",
+      name: "Meeting Room",
       emoji: "🤝",
+      description: "Where great ideas are born... or where time goes to die",
+      tabType: TabType.Office,
     },
     {
-      id: "vip-status",
-      name: "Shopee VIP Status",
-      price: 300,
-      image: "vip",
-      description: "Premium company benefits and recognition",
-      effects: { experience: 100, productivity: 20, burnout: -30 },
-      duration: "permanent",
-      owned: false,
-      premium: true,
-      requiresLevel: 5,
-      emoji: "🌟",
+      id: "pantry",
+      name: "Pantry",
+      emoji: "☕",
+      description: "The social hub where coffee meets conversation",
+      tabType: TabType.Shop,
+    },
+    {
+      id: "gym",
+      name: "Office Gym",
+      emoji: "💪",
+      description: "Sweat out the stress and pump up the productivity",
+      tabType: TabType.Character,
+    },
+    {
+      id: "rooftop-garden",
+      name: "Rooftop Garden",
+      emoji: "🌳",
+      description: "A zen oasis above the corporate chaos",
+      tabType: TabType.Office,
+    },
+    {
+      id: "hr-portal",
+      name: "HR Portal",
+      emoji: "📄",
+      description: "For all your human resources needs and bureaucratic adventures",
+      tabType: TabType.Portal,
+    },
+    {
+      id: "it-helpdesk",
+      name: "IT Helpdesk",
+      emoji: "💻",
+      description: "When technology fails you, they've got your back",
+      tabType: TabType.Portal,
+    },
+  ],
+  randomEvents: [
+    {
+      id: "event-1",
+      title: "The Great Coffee Machine Rebellion",
+      description:
+        "The office coffee machine has started making suspicious gurgling noises and dispensing what can only be described as 'brown liquid of questionable origin.' What's your survival strategy?",
+      choices: [
+        {
+          id: "choice-1a",
+          text: "Brave the mystery brew anyway (YOLO)",
+          result:
+            "You took a sip and... it's actually not bad! Your taste buds have evolved. You've gained the superpower of drinking anything caffeinated.",
+          effect: { energy: 25, productivity: 10, exp: 15 },
+        },
+        {
+          id: "choice-1b",
+          text: "Start a coffee fund for a new machine",
+          result:
+            "You rallied the troops! Everyone chipped in and now you have a fancy new machine. You're the office hero... until someone breaks it again.",
+          effect: { social: 20, exp: 20, shopeeCoins: -10 },
+        },
+        {
+          id: "choice-1c",
+          text: "Switch to tea like a civilized person",
+          result:
+            "You've discovered the zen of tea drinking. Your colleagues look at you with a mix of respect and confusion. Inner peace achieved.",
+          effect: { burnout: -15, productivity: 5, exp: 10 },
+        },
+      ],
+    },
+    {
+      id: "event-2",
+      title: "The Mysterious Case of the Disappearing Lunch",
+      description:
+        "Your carefully labeled lunch has vanished from the office fridge. Security footage shows only a shadowy figure with suspicious sandwich-eating motives. How do you handle this culinary crime?",
+      choices: [
+        {
+          id: "choice-2a",
+          text: "Launch a full CSI investigation",
+          result:
+            "After interrogating half the office and analyzing crumb patterns, you discovered it was the cleaning lady's first day and she thought it was abandoned. Mystery solved!",
+          effect: { exp: 25, social: 10, productivity: -5 },
+        },
+        {
+          id: "choice-2b",
+          text: "Post passive-aggressive notes everywhere",
+          result:
+            "Your notes have become legendary office memes. People are now afraid to even look at the fridge. Mission accomplished... sort of.",
+          effect: { social: -5, burnout: 10, exp: 5 },
+        },
+        {
+          id: "choice-2c",
+          text: "Order takeout and move on with life",
+          result:
+            "You discovered an amazing new restaurant! Sometimes the best things come from the worst situations. Plus, you avoided office drama.",
+          effect: { energy: 20, burnout: -10, shopeeCoins: -15 },
+        },
+      ],
+    },
+    {
+      id: "event-3",
+      title: "The Printer Uprising",
+      description:
+        "The office printer has achieved sentience and is now refusing to print anything except cat memes and error messages. It's holding your important documents hostage. What's your negotiation strategy?",
+      choices: [
+        {
+          id: "choice-3a",
+          text: "Offer it a sacrifice of toner cartridges",
+          result:
+            "The printer accepted your offering! It's now printing everything perfectly... but only cat-themed documents. Your reports now have tiny paw prints in the margins.",
+          effect: { productivity: 15, exp: 20, social: 10 },
+        },
+        {
+          id: "choice-3b",
+          text: "Try turning it off and on again (classic)",
+          result:
+            "IT magic works! The printer is back to normal, but now it occasionally prints 'THANK YOU FOR REBOOTING ME' at the bottom of pages. At least it's polite.",
+          effect: { productivity: 10, exp: 15 },
+        },
+        {
+          id: "choice-3c",
+          text: "Embrace the digital age and go paperless",
+          result:
+            "You've revolutionized the office workflow! Everyone's impressed by your forward-thinking approach. The printer sits in the corner, plotting its revenge.",
+          effect: { productivity: 20, exp: 30, burnout: -5 },
+        },
+      ],
+    },
+    {
+      id: "event-4",
+      title: "The Great Air Conditioning War",
+      description:
+        "The office has split into two factions: Team Arctic (who want it colder) and Team Sahara (who are already wearing winter coats indoors). You hold the remote. Choose your allegiance wisely.",
+      choices: [
+        {
+          id: "choice-4a",
+          text: "Join Team Arctic - embrace the freeze",
+          result:
+            "You've created a winter wonderland! Productivity is up because everyone's too cold to be lazy. You're now known as the Ice Queen/King of the office.",
+          effect: { productivity: 15, social: -5, burnout: -10 },
+        },
+        {
+          id: "choice-4b",
+          text: "Side with Team Sahara - bring the heat",
+          result:
+            "The office is now a tropical paradise! Everyone's relaxed and happy, but also slightly drowsy. You've achieved peak comfort at the cost of alertness.",
+          effect: { burnout: -15, energy: -5, social: 10 },
+        },
+        {
+          id: "choice-4c",
+          text: "Propose a democratic temperature vote",
+          result:
+            "You've established the Office Temperature Council! Democracy prevails, though the debates are more heated than the actual temperature discussions.",
+          effect: { social: 20, exp: 25, productivity: 5 },
+        },
+      ],
+    },
+    {
+      id: "event-5",
+      title: "The Elevator Karaoke Incident",
+      description:
+        "You're stuck in the elevator with your boss and the elevator music is so catchy that someone started singing along. Now everyone's looking at each other awkwardly. The tension is palpable.",
+      choices: [
+        {
+          id: "choice-5a",
+          text: "Join in and turn it into a full concert",
+          result:
+            "You've started the first-ever Elevator Idol competition! Your boss was so impressed by your confidence that you got a special mention in the next team meeting.",
+          effect: { social: 25, exp: 20, productivity: 5 },
+        },
+        {
+          id: "choice-5b",
+          text: "Pretend to check your phone intensely",
+          result:
+            "You successfully avoided the awkwardness, but missed out on what became legendary office folklore. Sometimes playing it safe means missing the fun.",
+          effect: { burnout: 5, social: -5 },
+        },
+        {
+          id: "choice-5c",
+          text: "Start beatboxing to provide backup",
+          result:
+            "Your beatboxing skills were surprisingly good! The elevator ride became an impromptu music video. You're now the office's official hype person.",
+          effect: { social: 30, exp: 25, energy: 10 },
+        },
+      ],
+    },
+    {
+      id: "event-6",
+      title: "The Mysterious Office Plant Whisperer",
+      description:
+        "Someone has been leaving encouraging notes for the office plants, and they're thriving like never before. You've been elected to investigate this botanical mystery. The plants seem to be watching you...",
+      choices: [
+        {
+          id: "choice-6a",
+          text: "Set up a plant surveillance operation",
+          result:
+            "You caught the culprit! It was the janitor who's been talking to plants for 20 years. He's now the official Office Plant Therapist and morale has never been higher.",
+          effect: { exp: 30, social: 15, burnout: -10 },
+        },
+        {
+          id: "choice-6b",
+          text: "Start leaving your own plant notes",
+          result:
+            "You've joined the secret plant appreciation society! The office greenery is now so lush it's like working in a jungle. Oxygen levels are through the roof!",
+          effect: { energy: 20, burnout: -15, productivity: 10 },
+        },
+        {
+          id: "choice-6c",
+          text: "Interview the plants directly",
+          result:
+            "The plants didn't respond verbally, but you swear one of them winked at you. You've either discovered plant consciousness or need more coffee. Probably both.",
+          effect: { exp: 15, energy: -5, social: 5 },
+        },
+      ],
+    },
+  ],
+  seaTalkMessages: [
+    {
+      sender: "HR_Bot",
+      content: "Reminder: Submit your Q2 performance review by end of day!",
+      timestampOffset: 10,
+      tone: "professional",
+    },
+    {
+      sender: "TeamLead_Alex",
+      content: "Anyone seen my orange stapler? It's gone missing again...",
+      timestampOffset: 15,
+      tone: "jovial",
+    },
+    {
+      sender: "Dev_Sarah",
+      content: "Just deployed the new feature! Fingers crossed it doesn't break anything 🤞",
+      timestampOffset: 20,
+      tone: "anxious",
+    },
+    {
+      sender: "Marketing_Ben",
+      content: "Is it Friday yet? Asking for a friend... who is me.",
+      timestampOffset: 25,
+      tone: "sarcastic",
+    },
+    {
+      sender: "Intern_Chloe",
+      content: "Feeling a bit overwhelmed with all these new tools. Any tips?",
+      timestampOffset: 30,
+      tone: "sad",
+    },
+    {
+      sender: "HR_Bot",
+      content: "Don't forget to claim your ShopeeCoins from the daily login bonus!",
+      timestampOffset: 35,
+      tone: "professional",
+    },
+    {
+      sender: "TeamLead_Alex",
+      content: "Great work on the recent sprint, team! Keep up the momentum!",
+      timestampOffset: 40,
+      tone: "professional",
+    },
+    {
+      sender: "Dev_Sarah",
+      content: "Ugh, another bug report. My life is just fixing my own mistakes.",
+      timestampOffset: 45,
+      tone: "angry",
+    },
+    {
+      sender: "Marketing_Ben",
+      content: "Just saw a cat walk across someone's screen during a meeting. Best meeting ever.",
+      timestampOffset: 50,
+      tone: "jovial",
+    },
+    {
+      sender: "Intern_Chloe",
+      content: "Anyone want to grab bubble tea later? My treat!",
+      timestampOffset: 55,
+      tone: "casual",
+    },
+    {
+      sender: "HR_Bot",
+      content: "Your well-being is important! Remember to take short breaks.",
+      timestampOffset: 60,
+      tone: "professional",
+    },
+    {
+      sender: "TeamLead_Alex",
+      content: "I'm starting to think my coffee machine is sentient and judging my life choices.",
+      timestampOffset: 65,
+      tone: "sarcastic",
+    },
+    {
+      sender: "Dev_Sarah",
+      content: "Why does my code only work on my machine? The universe conspires against me.",
+      timestampOffset: 70,
+      tone: "anxious",
+    },
+    {
+      sender: "Marketing_Ben",
+      content: "Just crushed my daily steps goal. Who needs a treadmill when you have office errands?",
+      timestampOffset: 75,
+      tone: "jovial",
+    },
+    {
+      sender: "Intern_Chloe",
+      content: "This project is actually pretty cool. Learning so much!",
+      timestampOffset: 80,
+      tone: "happy",
+    },
+    {
+      sender: "HR_Bot",
+      content: "Don't forget to update your emergency contact information.",
+      timestampOffset: 85,
+      tone: "professional",
+    },
+    {
+      sender: "TeamLead_Alex",
+      content: "My cat just deleted half my code. Send help (and treats).",
+      timestampOffset: 90,
+      tone: "jovial",
+    },
+    {
+      sender: "Dev_Sarah",
+      content: "Is it just me, or is the office air conditioning set to 'arctic blast' today?",
+      timestampOffset: 95,
+      tone: "sarcastic",
+    },
+    {
+      sender: "Marketing_Ben",
+      content: "Just had a breakthrough on the next campaign! Prepare to be amazed.",
+      timestampOffset: 100,
+      tone: "jovial",
+    },
+    {
+      sender: "Intern_Chloe",
+      content: "Anyone else feeling sleepy after lunch? 😴",
+      timestampOffset: 105,
+      tone: "casual",
     },
   ],
 }
-
-export const organizationChart: OrgNode[] = [
-  { id: "ceo", name: "Olivia Chen", title: "CEO", emoji: "👑" },
-  { id: "cto", name: "David Lee", title: "CTO", reportsTo: "ceo", emoji: "💻" },
-  { id: "cfo", name: "Sarah Lim", title: "CFO", reportsTo: "ceo", emoji: "💰" },
-  { id: "hrd", name: "Emily Wong", title: "HR Director", reportsTo: "ceo", emoji: "🤝" },
-  { id: "eng-lead", name: "Michael Tan", title: "Engineering Lead", reportsTo: "cto", emoji: "⚙️" },
-  { id: "data-lead", name: "Jessica Goh", title: "Data Science Lead", reportsTo: "cto", emoji: "📊" },
-  { id: "fin-mgr", name: "Daniel Khoo", title: "Finance Manager", reportsTo: "cfo", emoji: "📈" },
-  { id: "hr-mgr", name: "Chloe Lim", title: "HR Manager", reportsTo: "hrd", emoji: "🧑‍💼" },
-  { id: "you", name: "You", title: "Associate", reportsTo: "eng-lead", emoji: "👤" }, // Player's initial position
-]
-
-export const randomEvents: RandomEvent[] = [
-  {
-    id: "coffee-spill",
-    title: "Coffee Catastrophe!",
-    description: "You accidentally spilled coffee all over your keyboard. What do you do?",
-    emoji: "☕",
-    options: [
-      {
-        text: "Clean it immediately (lose time, gain productivity)",
-        emoji: "🧼",
-        effects: { energy: -5, productivity: 10, burnout: -2, money: -5 },
-      },
-      {
-        text: "Call IT support (lose money, no time lost)",
-        emoji: "📞",
-        effects: { money: -50, burnout: 5 },
-      },
-    ],
-  },
-  {
-    id: "urgent-request",
-    title: "Urgent Client Request!",
-    description: "A high-priority client needs a report ASAP. It's almost quitting time.",
-    emoji: "🚨",
-    options: [
-      {
-        text: "Stay late to finish (gain productivity, burnout)",
-        emoji: "🌙",
-        effects: { productivity: 20, burnout: 15, energy: -10, experience: 10 },
-      },
-      {
-        text: "Delegate to a colleague (lose productivity, gain money)",
-        emoji: "🤝",
-        effects: { productivity: -5, money: 20, burnout: -5 },
-      },
-    ],
-  },
-  {
-    id: "office-gossip",
-    title: "Office Gossip!",
-    description: "You overhear some juicy office gossip. Do you get involved?",
-    emoji: "🤫",
-    options: [
-      {
-        text: "Join the conversation (lose productivity, gain energy)",
-        emoji: "🗣️",
-        effects: { productivity: -10, energy: 10, burnout: 5 },
-      },
-      {
-        text: "Ignore and focus on work (gain productivity, lose energy)",
-        emoji: "🧘",
-        effects: { productivity: 5, energy: -2, burnout: -2 },
-      },
-    ],
-  },
-  {
-    id: "free-food",
-    title: "Free Food Alert!",
-    description: "Someone brought in free snacks/pizza for the team. Do you grab some?",
-    emoji: "🍕",
-    options: [
-      {
-        text: "Indulge (gain energy, lose money)",
-        emoji: "😋",
-        effects: { energy: 15, money: -5 },
-      },
-      {
-        text: "Stick to your diet (no change)",
-        emoji: "🥗",
-        effects: {},
-      },
-    ],
-  },
-  {
-    id: "system-crash",
-    title: "System Crash!",
-    description: "Your computer suddenly freezes. All unsaved work is at risk!",
-    emoji: "💥",
-    options: [
-      {
-        text: "Force restart (risk data loss, quick fix)",
-        emoji: "🔄",
-        effects: { productivity: -15, burnout: 10 },
-      },
-      {
-        text: "Wait for IT (lose time, no risk)",
-        emoji: "⏳",
-        effects: { energy: -5, burnout: 5 },
-      },
-    ],
-  },
-  {
-    id: "new-hire",
-    title: "New Hire Introduction!",
-    description: "A new colleague joins your team. Do you introduce yourself?",
-    emoji: "👋",
-    options: [
-      {
-        text: "Welcome them warmly (gain experience, energy)",
-        emoji: "😊",
-        effects: { experience: 5, energy: 5 },
-      },
-      {
-        text: "Stay focused on your tasks (no change)",
-        emoji: "🤫",
-        effects: {},
-      },
-    ],
-  },
-  {
-    id: "mentor-opportunity",
-    title: "Mentorship Opportunity!",
-    description: "A senior leader offers to mentor you. Do you accept?",
-    emoji: "🌟",
-    options: [
-      {
-        text: "Accept (gain experience, productivity)",
-        emoji: "📈",
-        effects: { experience: 20, productivity: 10, burnout: -5 },
-      },
-      {
-        text: "Decline (no change)",
-        emoji: "🙅",
-        effects: {},
-      },
-    ],
-  },
-  {
-    id: "team-lunch-invite",
-    title: "Team Lunch Invitation!",
-    description: "Your team is going out for lunch. Join them?",
-    emoji: "🍽️",
-    options: [
-      {
-        text: "Join the team (gain energy, lose money)",
-        emoji: "🥳",
-        effects: { energy: 10, money: -15 },
-      },
-      {
-        text: "Eat at your desk (save money, no social gain)",
-        emoji: "💻",
-        effects: { money: 5 },
-      },
-    ],
-  },
-  {
-    id: "charity-drive",
-    title: "Company Charity Drive!",
-    description: "The company is organizing a charity drive. Will you contribute?",
-    emoji: "❤️",
-    options: [
-      {
-        text: "Donate money (lose money, gain mood)",
-        emoji: "💸",
-        effects: { money: -20, burnout: -10 },
-      },
-      {
-        text: "Volunteer time (lose energy, gain experience)",
-        emoji: "🤝",
-        effects: { energy: -10, experience: 10 },
-      },
-    ],
-  },
-  {
-    id: "power-outage",
-    title: "Sudden Power Outage!",
-    description: "The office lights flicker and go out. What's your move?",
-    emoji: "💡",
-    options: [
-      {
-        text: "Wait it out patiently (lose productivity, gain burnout)",
-        emoji: "😩",
-        effects: { productivity: -10, burnout: 5 },
-      },
-      {
-        text: "Go home (lose productivity, gain energy)",
-        emoji: "🏠",
-        effects: { productivity: -5, energy: 15, burnout: -5 },
-      },
-    ],
-  },
-]
-
-export const internalThoughts: InternalThought[] = [
-  { id: "thought1", text: "Another Monday, another mountain of emails. 😩", emoji: "📧" },
-  { id: "thought2", text: "Did I remember to mute myself on that last call? 🤔", emoji: "🔇" },
-  { id: "thought3", text: "My coffee is cold. This is fine. Everything is fine. 🔥", emoji: "☕" },
-  { id: "thought4", text: "Is it Friday yet? Asking for a friend... who is me. 🗓️", emoji: "📅" },
-  { id: "thought5", text: "That meeting could have been an email. 🙄", emoji: "💬" },
-  { id: "thought6", text: "My brain feels like a deflated balloon. 🎈", emoji: "🧠" },
-  { id: "thought7", text: "Just 5 more minutes until lunch... 🤤", emoji: "⏰" },
-  { id: "thought8", text: "I need a vacation from this vacation planning. ✈️", emoji: "🏝️" },
-  { id: "thought9", text: "Why is the printer always out of ink when I need it? 😤", emoji: "🖨️" },
-  { id: "thought10", text: "My productivity is peaking! Or maybe it's just the sugar rush. 🚀", emoji: "📈" },
-  { id: "thought11", text: "I should probably stretch. Or just sit here longer. 🧘", emoji: "🛋️" },
-  { id: "thought12", text: "The office air conditioning is either arctic or tropical. No in-between. 🥶", emoji: "🌬️" },
-  {
-    id: "thought13",
-    text: "Is it acceptable to wear pajamas to a video call if only my top half shows? 🤔",
-    emoji: "👚",
-  },
-  { id: "thought14", text: "My spirit animal is a sloth on a coffee break. ☕🦥", emoji: "😴" },
-  { id: "thought15", text: "I'm pretty sure my desk plant is judging my life choices. 🪴", emoji: "👀" },
-  { id: "thought16", text: "Just survived another 'quick chat' that lasted an hour. Send help.🆘", emoji: "😵" },
-  { id: "thought17", text: "My brain is buffering. Please wait... 🔄", emoji: "⏳" },
-  { id: "thought18", text: "I'm not procrastinating, I'm just giving my ideas time to marinate. 💡", emoji: "💭" },
-  { id: "thought19", text: "If I stare at this spreadsheet any longer, it might start staring back. 📊", emoji: "👁️" },
-  { id: "thought20", text: "My work-life balance is currently 90% work, 10% wondering what 'life' is. ⚖️", emoji: "🤷" },
-]

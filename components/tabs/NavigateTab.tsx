@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip" // Import Tooltip components
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import type { LocationType, GameState } from "@/types/game"
 import { useState } from "react"
 import { MapPin, Clock } from "lucide-react"
@@ -21,10 +21,10 @@ export function NavigateTab({ onNavigate, locations, gameState }: NavigateTabPro
 
   // Organize locations by floor
   const locationsByFloor = {
-    1: locations.filter((loc) => ["office", "meeting-room", "pantry", "toilet", "smoking-area"].includes(loc.id)), // Added toilet and smoking-area
+    1: locations.filter((loc) => ["office", "meeting-room", "pantry", "toilet", "smoking-area"].includes(loc.id)),
     2: locations.filter((loc) =>
       ["hr-portal", "it-helpdesk", "company-news", "learning-hub", "feedback-form", "wellness-corner"].includes(loc.id),
-    ), // Added new portal locations
+    ),
     3: locations.filter((loc) => ["gym", "rooftop-garden"].includes(loc.id)),
   }
 
@@ -44,39 +44,6 @@ export function NavigateTab({ onNavigate, locations, gameState }: NavigateTabPro
         return cigarettes ? cigarettes.quantity > 0 : false
       default:
         return true
-    }
-  }
-
-  const getLocationIcon = (locationId: string) => {
-    switch (locationId) {
-      case "office":
-        return <span className="text-3xl">💼</span>
-      case "gym":
-        return <span className="text-3xl">🏋️</span>
-      case "rooftop-garden":
-        return <span className="text-3xl">🌿</span>
-      case "meeting-room":
-        return <span className="text-3xl">👥</span>
-      case "pantry":
-        return <span className="text-3xl">☕</span>
-      case "hr-portal":
-        return <span className="text-3xl">📋</span>
-      case "it-helpdesk":
-        return <span className="text-3xl">💻</span>
-      case "toilet":
-        return <span className="text-3xl">🚽</span>
-      case "smoking-area":
-        return <span className="text-3xl">🚬</span>
-      case "company-news":
-        return <span className="text-3xl">📰</span>
-      case "learning-hub":
-        return <span className="text-3xl">📚</span>
-      case "feedback-form":
-        return <span className="text-3xl">📝</span>
-      case "wellness-corner":
-        return <span className="text-3xl">🧘</span>
-      default:
-        return <span className="text-3xl">📍</span>
     }
   }
 
@@ -150,7 +117,7 @@ export function NavigateTab({ onNavigate, locations, gameState }: NavigateTabPro
                     }`}
                   >
                     <div className="text-center">
-                      <div className="text-xl md:text-2xl mb-1">{floor === 1 ? "🏢" : floor === 2 ? "💼" : "🌟"}</div>
+                      <div className="text-xl md:text-2xl mb-1">{floor === 1 ? "📍" : floor === 2 ? "⚙️" : "🏞️"}</div>
                       <div>Floor {floor}</div>
                     </div>
                   </Button>
@@ -201,9 +168,7 @@ export function NavigateTab({ onNavigate, locations, gameState }: NavigateTabPro
                                 </div>
                               </div>
                             </div>
-                            <div className="p-2 md:p-3 bg-gray-100 dark:bg-gray-700 rounded-full hover:scale-110 transition-transform duration-200">
-                              {getLocationIcon(location.id)}
-                            </div>
+                            {/* Removed the redundant circular icon with emoji */}
                           </div>
 
                           {/* Description */}

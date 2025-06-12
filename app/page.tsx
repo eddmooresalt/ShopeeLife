@@ -9,11 +9,8 @@ import {
   calculateLunchProgress,
   generateDailyQuests,
   getGameDay,
-  getWeather,
-  generateSeaTalkMessage,
-  calculatePlayerGrade,
-  getLevelRank,
   performSmokingAction,
+  processGameTick,
 } from "@/utils/gameUtils"
 import { GameHeader } from "@/components/GameHeader"
 import { BottomNavigation } from "@/components/BottomNavigation"
@@ -36,46 +33,41 @@ import { SmokingAreaLocation } from "@/components/locations/SmokingAreaLocation"
 export default function Home() {
   const [gameState, setGameState] = useState<GameState>(initialGameState)
   const [activeTab, setActiveTab] = useState<TabType>(TabType.Office)
-  const [showLunchReminder, setShowLunchReminder] = useState(false)
   const [internalThought, setInternalThought] = useState<string | null>(null)
+  const [showLunchReminder, setShowLunchReminder] = useState(false)
   const [showOvertimePrompt, setShowOvertimePrompt] = useState(false)
   const [showSleepScreen, setShowSleepScreen] = useState(false)
   const [showRandomEvent, setShowRandomEvent] = useState(false)
   const [currentRandomEvent, setCurrentRandomEvent] = useState<RandomEvent | null>(null)
-  const [isGamePaused, setIsGamePaused] = useState(false) // New state for pausing game during events/modals
+  // Removed: const [isGamePaused, setIsGamePaused] = useState(false);
 
   const gameIntervalRef = useRef<NodeJS.Timeout | null>(null)
-  const internalThoughtTimerRef = useRef<NodeJS.Timeout | null>(null) // Timer for internal thought dismissal
+  const internalThoughtTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const currentDay = getGameDay(gameState.gameTime)
   const currentHour = Math.floor(gameState.gameTime / 60) % 24
 
-  // New state for time-based tasks (moved from previous page.tsx)
   const [isWorking, setIsWorking] = useState(false)
   const [workingTaskId, setWorkingTaskId] = useState<string | null>(null)
-  const [workProgress, setWorkProgress] = useState(0) // 0-100%
+  const [workProgress, setWorkProgress] = useState(0)
   const workTimerRef = useRef<NodeJS.Timeout | null>(null)
   const workStartTimeRef = useRef<number>(0)
-  const workDurationSeconds = 10 // Target 10 seconds for task completion
+  const workDurationSeconds = 10
 
-  // Load game state on mount
   useEffect(() => {
     const savedState = loadGame()
     if (savedState) {
       setGameState(savedState)
     } else {
-      // If no saved state, initialize daily quests for day 1
       const initialQuests = generateDailyQuests(currentDay, gameData)
       setGameState((prev) => ({ ...prev, dailyQuests: initialQuests }))
     }
   }, [])
 
-  // Save game state whenever it changes
   useEffect(() => {
     saveGame(gameState)
   }, [gameState])
 
-  // Effect for internal thought dismissal
   useEffect(() => {
     if (internalThought) {
       if (internalThoughtTimerRef.current) {
@@ -83,7 +75,7 @@ export default function Home() {
       }
       internalThoughtTimerRef.current = setTimeout(() => {
         setInternalThought(null)
-      }, 3000) // Dismiss after 3 seconds
+      }, 3000)
     }
     return () => {
       if (internalThoughtTimerRef.current) {
@@ -92,111 +84,55 @@ export default function Home() {
     }
   }, [internalThought])
 
-  // Add a new useEffect to ensure isGamePaused is false when no modals are active
-  // This will re-enable the bottom navigation if it was inadvertently paused
-  // without a visible modal.
-  useEffect(() => {
-    if (!showLunchReminder && !showOvertimePrompt && !showSleepScreen && !showRandomEvent) {
-      setIsGamePaused(false)
-    }
-  }, [showLunchReminder, showOvertimePrompt, showSleepScreen, showRandomEvent])
+  // Removed: useEffect for isGamePaused state
 
-  // Game loop
   useEffect(() => {
-    if (isGamePaused) {
-      if (gameIntervalRef.current) {
-        clearInterval(gameIntervalRef.current)
-        gameIntervalRef.current = null
-      }
-      return
-    }
-
     gameIntervalRef.current = setInterval(() => {
       setGameState((prevGameState) => {
-        const newGameTime = prevGameState.gameTime + 1 // Advance by 1 minute
-        const newCurrentDay = getGameDay(newGameTime)
-        const newCurrentHour = Math.floor(newGameTime / 60) % 24
+        const newGameState = processGameTick(prevGameState, gameData)
 
-        let updatedState = { ...prevGameState, gameTime: newGameTime }
-
-        // Level up logic
-        const expNeededForNextLevel = updatedState.level * 100 // Example: 100, 200, 300...
-        if (updatedState.exp >= expNeededForNextLevel) {
-          updatedState.level += 1
-          updatedState.exp -= expNeededForNextLevel // Carry over excess EXP
-          setInternalThought(`Congratulations! You reached Level ${updatedState.level}!`)
-        }
-
-        // Daily reset logic
-        if (newCurrentDay > prevGameState.lastQuestResetDay) {
-          const newDailyQuests = generateDailyQuests(newCurrentDay, gameData)
-          updatedState = {
-            ...updatedState,
-            tasks: updatedState.tasks.map((task) => ({ ...task, progress: 0, isCompleted: false })), // Reset tasks
-            hasEatenLunch: false,
-            lunchItemEatenId: null,
-            dailyQuests: newDailyQuests,
-            lastQuestResetDay: newCurrentDay,
-            hasClaimedDailyBonus: false,
-            hasShownLunchReminder: false,
-          }
-          setInternalThought(`A new day begins! Day ${newCurrentDay}. New daily quests available!`)
-        }
-
-        // Lunch reminder logic (12:00 PM)
-        if (newCurrentHour === 12 && !prevGameState.hasShownLunchReminder) {
+        if (newGameState._triggerLunchReminder) {
           setShowLunchReminder(true)
-          setIsGamePaused(true) // Pause game for reminder
-          updatedState.hasShownLunchReminder = true
+          // Removed: setIsGamePaused(true);
+          newGameState._triggerLunchReminder = false
         }
-
-        // End of day / Overtime prompt (6:00 PM)
-        if (newCurrentHour === 18 && prevGameState.gameTime % 60 === 0 && !showOvertimePrompt) {
+        if (newGameState._triggerOvertimePrompt) {
           setShowOvertimePrompt(true)
-          setIsGamePaused(true) // Pause game for overtime prompt
+          // Removed: setIsGamePaused(true);
+          newGameState._triggerOvertimePrompt = false
         }
-
-        // Sleep screen (10:00 PM)
-        if (newCurrentHour === 22 && prevGameState.gameTime % 60 === 0 && !showSleepScreen) {
+        if (newGameState._triggerSleepScreen) {
           setShowSleepScreen(true)
-          setIsGamePaused(true) // Pause game for sleep screen
+          // Removed: setIsGamePaused(true);
+          newGameState._triggerSleepScreen = false
         }
-
-        // Random event trigger (every 2 game hours, 10% chance, AFTER 2 PM)
-        if (
-          newGameTime % 120 === 0 && // Every 2 game hours
-          Math.random() < 0.1 && // 10% chance
-          newCurrentHour >= 14 && // Only after 2 PM (14:00)
-          !showRandomEvent &&
-          !isGamePaused &&
-          gameData.randomEvents.length > 0
-        ) {
-          const randomEvent = gameData.randomEvents[Math.floor(Math.random() * gameData.randomEvents.length)]
-          setCurrentRandomEvent(randomEvent)
+        if (newGameState._triggerRandomEvent && newGameState._currentRandomEvent) {
+          setCurrentRandomEvent(newGameState._currentRandomEvent)
           setShowRandomEvent(true)
-          setIsGamePaused(true)
+          // Removed: setIsGamePaused(true);
+          newGameState._triggerRandomEvent = false
+          newGameState._currentRandomEvent = null
+        }
+        if (newGameState._internalThoughtQueue && newGameState._internalThoughtQueue.length > 0) {
+          setInternalThought(newGameState._internalThoughtQueue.shift() || null)
         }
 
-        // Update weather
-        updatedState.currentWeather = getWeather(newGameTime)
-
-        return updatedState
+        return newGameState
       })
-    }, 1000) // 1 game minute = 1 real second
+    }, 1000)
 
     return () => {
       if (gameIntervalRef.current) {
         clearInterval(gameIntervalRef.current)
       }
     }
-  }, [isGamePaused, showOvertimePrompt, showSleepScreen, showRandomEvent, currentDay]) // Depend on isGamePaused
+  }, [currentDay]) // Removed isGamePaused from dependencies
 
-  // Effect for time-based task progression (moved from previous page.tsx)
   useEffect(() => {
     if (isWorking && workingTaskId) {
       workStartTimeRef.current = Date.now()
       workTimerRef.current = setInterval(() => {
-        const elapsedTime = (Date.now() - workStartTimeRef.current) / 1000 // in seconds
+        const elapsedTime = (Date.now() - workStartTimeRef.current) / 1000
         const progress = Math.min(100, (elapsedTime / workDurationSeconds) * 100)
         setWorkProgress(progress)
 
@@ -208,7 +144,6 @@ export default function Home() {
           setWorkingTaskId(null)
           setWorkProgress(0)
 
-          // Apply task completion effects
           setGameState((prev) => {
             const taskIndex = prev.tasks.findIndex((t) => t.id === workingTaskId)
             if (taskIndex === -1) return prev
@@ -222,9 +157,8 @@ export default function Home() {
               task.isCompleted = true
               expGained = task.rewardExp
               shopeeCoinsGained = task.rewardCoins
-              burnoutEffect = task.burnoutEffect || 0 // Get burnout effect
+              burnoutEffect = task.burnoutEffect || 0
 
-              // Schedule side effects for next tick
               setTimeout(() => {
                 let message = `Task "${task.name}" completed! You earned ${expGained} EXP and ${shopeeCoinsGained} SC.`
                 if (burnoutEffect !== 0) {
@@ -244,12 +178,12 @@ export default function Home() {
               shopeeCoins: prev.shopeeCoins + shopeeCoinsGained,
               stats: {
                 ...prev.stats,
-                burnout: Math.max(0, Math.min(100, prev.stats.burnout + burnoutEffect)), // Apply burnout effect
+                burnout: Math.max(0, Math.min(100, prev.stats.burnout + burnoutEffect)),
               },
             }
           })
         }
-      }, 100) // Update work progress every 100ms
+      }, 100)
     } else {
       if (workTimerRef.current) {
         clearInterval(workTimerRef.current)
@@ -264,7 +198,6 @@ export default function Home() {
 
   const handleWork = useCallback(
     (taskId: string) => {
-      // This function now just sets the state to start the work timer
       if (isWorking) {
         setInternalThought("Already working on a task!")
         return
@@ -275,7 +208,6 @@ export default function Home() {
         return
       }
 
-      // Deduct energy immediately
       setGameState((prev) => ({
         ...prev,
         stats: {
@@ -304,7 +236,6 @@ export default function Home() {
         )
         setInternalThought(lunchThought)
 
-        // Update daily quest progress for Lunch type
         const updatedDailyQuests = updatedState.dailyQuests.map((quest) => {
           if (quest.type === QuestType.Lunch && quest.criteria?.lunchItemId === itemId && !quest.isCompleted) {
             return { ...quest, currentProgress: (quest.currentProgress || 0) + 1 }
@@ -315,7 +246,7 @@ export default function Home() {
         return { ...updatedState, dailyQuests: updatedDailyQuests }
       })
       setShowLunchReminder(false)
-      setIsGamePaused(false) // Resume game after lunch
+      // Removed: setIsGamePaused(false);
     },
     [gameData.lunchLocations, gameData.lunchItems],
   )
@@ -337,13 +268,11 @@ export default function Home() {
         if (itemToBuy.type === "consumable") {
           const existingConsumable = updatedConsumablesInventory.find((c) => c.itemId === itemId)
           if (existingConsumable) {
-            // For Marlboro, each purchase adds 20 sticks
             const quantityToAdd = itemId === "marlboro-cigarettes" ? 20 : 1
             updatedConsumablesInventory = updatedConsumablesInventory.map((c) =>
               c.itemId === itemId ? { ...c, quantity: c.quantity + quantityToAdd } : c,
             )
           } else {
-            // For Marlboro, initial purchase adds 20 sticks
             const initialQuantity = itemId === "marlboro-cigarettes" ? 20 : 1
             updatedConsumablesInventory.push({ itemId: itemId, quantity: initialQuantity })
           }
@@ -357,7 +286,6 @@ export default function Home() {
           internalThoughtMessage = `You bought ${itemToBuy.name}. Check your Character tab to wear it!`
         }
 
-        // Apply immediate effects for consumables (if any)
         let updatedStats = { ...prev.stats }
         if (itemToBuy.type === "consumable" && itemToBuy.effect) {
           updatedStats = {
@@ -365,14 +293,12 @@ export default function Home() {
             productivity: Math.min(100, Math.max(0, updatedStats.productivity + (itemToBuy.effect.productivity || 0))),
             burnout: Math.min(100, Math.max(0, updatedStats.burnout + (itemToBuy.effect.burnout || 0))),
           }
-          // Consumables also give EXP/Coins directly on purchase if specified
           if (itemToBuy.effect.exp) prev.exp += itemToBuy.effect.exp
           if (itemToBuy.effect.shopeeCoins) prev.shopeeCoins += itemToBuy.effect.shopeeCoins
         }
 
         setInternalThought(internalThoughtMessage)
 
-        // Update daily quest progress for Shop type
         const updatedDailyQuests = prev.dailyQuests.map((quest) => {
           if (quest.type === QuestType.Shop && quest.criteria?.shopItemId === itemId && !quest.isCompleted) {
             return { ...quest, currentProgress: (quest.currentProgress || 0) + 1 }
@@ -417,7 +343,6 @@ export default function Home() {
           quantity: itemInInventory.quantity - 1,
         }
 
-        // Remove item from inventory if quantity drops to 0
         updatedConsumablesInventory = updatedConsumablesInventory.filter((c) => c.quantity > 0)
 
         let updatedStats = { ...prev.stats }
@@ -450,7 +375,6 @@ export default function Home() {
 
   const handleNavigate = useCallback((location: LocationType) => {
     setGameState((prev) => {
-      // Update daily quest progress for Navigate type
       const updatedDailyQuests = prev.dailyQuests.map((quest) => {
         if (quest.type === QuestType.Navigate && quest.criteria?.locationId === location.id && !quest.isCompleted) {
           return { ...quest, currentProgress: (quest.currentProgress || 0) + 1 }
@@ -460,7 +384,7 @@ export default function Home() {
 
       return { ...prev, currentLocation: location.id, dailyQuests: updatedDailyQuests }
     })
-    setActiveTab(location.tabType) // Switch to the tab associated with the location
+    setActiveTab(location.tabType)
   }, [])
 
   const handleNavigateToLocation = useCallback(
@@ -507,7 +431,7 @@ export default function Home() {
         return prev
       }
 
-      const bonusExp = 50 + prev.level * 5 // Scale bonus with level
+      const bonusExp = 50 + prev.level * 5
       const bonusCoins = 20 + prev.level * 2
 
       setInternalThought(`Daily bonus claimed! You received ${bonusExp} EXP and ${bonusCoins} SC.`)
@@ -525,13 +449,12 @@ export default function Home() {
     setGameState((prev) => {
       const newMessage = {
         id: `user-msg-${Date.now()}`,
-        sender: prev.playerName, // Use player's name
+        sender: prev.playerName,
         content: message,
         timestamp: prev.gameTime,
       }
       const updatedMessages = [...prev.seaTalkMessages, newMessage]
 
-      // Update daily quest progress for SeaTalk type
       const updatedDailyQuests = prev.dailyQuests.map((quest) => {
         if (quest.type === QuestType.SeaTalk && !quest.isCompleted) {
           return { ...quest, currentProgress: (quest.currentProgress || 0) + 1 }
@@ -560,7 +483,7 @@ export default function Home() {
           updatedExp = prev.exp + (chosen.effect.exp || 0)
           updatedShopeeCoins = prev.shopeeCoins + (chosen.effect.shopeeCoins || 0)
           updatedStats = {
-            energy: Math.min(100, Math.max(0, prev.stats.energy + (chosen.effect.energy || 0))),
+            energy: Math.min(100, Math.max(0, updatedStats.energy + (chosen.effect.energy || 0))),
             productivity: Math.min(100, Math.max(0, updatedStats.productivity + (chosen.effect.productivity || 0))),
             burnout: Math.min(100, Math.max(0, updatedStats.burnout + (chosen.effect.burnout || 0))),
           }
@@ -569,7 +492,7 @@ export default function Home() {
         setInternalThought(chosen.result)
         setShowRandomEvent(false)
         setCurrentRandomEvent(null)
-        setIsGamePaused(false) // Resume game
+        // Removed: setIsGamePaused(false);
 
         return {
           ...prev,
@@ -584,37 +507,35 @@ export default function Home() {
 
   const handleOvertimeDecision = useCallback((decision: "work" | "sleep") => {
     setShowOvertimePrompt(false)
-    setIsGamePaused(false) // Resume game regardless
+    // Removed: setIsGamePaused(false);
 
     if (decision === "work") {
       setInternalThought("You decided to work overtime. Hope it pays off!")
-      // Optionally apply temporary stat boosts/penalties for overtime
       setGameState((prev) => ({
         ...prev,
         stats: {
           ...prev.stats,
           productivity: Math.min(100, prev.stats.productivity + 10),
-          burnout: Math.min(100, prev.stats.burnout + 15), // Overtime increases burnout
+          burnout: Math.min(100, prev.stats.burnout + 15),
         },
       }))
     } else {
       setInternalThought("You decided to call it a day. Rest is important!")
-      // Immediately transition to sleep screen
       setShowSleepScreen(true)
-      setIsGamePaused(true)
+      // Removed: setIsGamePaused(true);
     }
   }, [])
 
   const handleSleep = useCallback(() => {
     setShowSleepScreen(false)
-    setIsGamePaused(false) // Resume game
+    // Removed: setIsGamePaused(false);
     setGameState((prev) => ({
       ...prev,
-      gameTime: getGameDay(prev.gameTime) * 24 * 60 + 9 * 60, // Advance to next day 9:00 AM
+      gameTime: getGameDay(prev.gameTime) * 24 * 60 + 9 * 60,
       stats: {
-        energy: Math.min(100, prev.stats.energy + 30), // Restore energy
-        burnout: Math.max(0, prev.stats.burnout - 20), // Reduce burnout
-        productivity: Math.min(100, prev.stats.productivity + 5), // Slight productivity boost
+        energy: Math.min(100, prev.stats.energy + 30),
+        burnout: Math.max(0, prev.stats.burnout - 20),
+        productivity: Math.min(100, prev.stats.productivity + 5),
       },
     }))
     setInternalThought("You had a good night's sleep. Ready for a new day!")
@@ -696,18 +617,40 @@ export default function Home() {
 
   const handleProgressComplete = useCallback((thought: string) => {
     setInternalThought(thought)
-    setIsGamePaused(false) // Ensure game is unpaused after progress completes
+    // Removed: setIsGamePaused(false);
   }, [])
 
   const handleActionStart = useCallback(() => {
-    setIsGamePaused(true) // Pause game when an action starts
+    // Removed: setIsGamePaused(true);
+    // This function now primarily serves as a hook for other potential side effects
+    // if needed in the future, but no longer pauses the game time.
   }, [])
 
-  // Update daily quest completion status
+  const handleSmokingCompleteRedirect = useCallback(() => {
+    setGameState((prev) => ({
+      ...prev,
+      currentLocation: TabType.Office,
+    }))
+    setActiveTab(TabType.Navigate)
+    setInternalThought("You are now back in the office, ready to navigate.")
+    // Removed: setIsGamePaused(false);
+  }, [])
+
+  // NEW: Function to handle redirection after toilet action
+  const handleToiletActionCompleteRedirect = useCallback(() => {
+    setGameState((prev) => ({
+      ...prev,
+      currentLocation: TabType.Office, // Assuming "office" is a default location on Floor 1
+    }))
+    setActiveTab(TabType.Navigate)
+    setInternalThought("You are now back in the office, ready to navigate.")
+    // Removed: setIsGamePaused(false);
+  }, [])
+
   useEffect(() => {
     setGameState((prev) => {
       const updatedQuests = prev.dailyQuests.map((quest) => {
-        if (quest.isCompleted) return quest // Already completed
+        if (quest.isCompleted) return quest
 
         let isQuestCompleted = false
         switch (quest.type) {
@@ -722,7 +665,7 @@ export default function Home() {
             if (quest.criteria?.statName) {
               const currentStatValue = prev.stats[quest.criteria.statName]
               if (quest.criteria.statName === "burnout") {
-                isQuestCompleted = currentStatValue <= (quest.targetValue || 0) // Burnout: lower is better
+                isQuestCompleted = currentStatValue <= (quest.targetValue || 0)
               } else {
                 isQuestCompleted = currentStatValue >= (quest.targetValue || 100)
               }
@@ -741,7 +684,7 @@ export default function Home() {
       })
       return { ...prev, dailyQuests: updatedQuests }
     })
-  }, [gameState.stats, gameState.tasks, gameState.consumablesInventory, gameState.wardrobe, gameState.seaTalkMessages]) // Depend on relevant state changes
+  }, [gameState.stats, gameState.tasks, gameState.consumablesInventory, gameState.wardrobe, gameState.seaTalkMessages])
 
   const renderTabContent = useCallback(() => {
     const currentLocation = gameData.locations.find((loc) => loc.id === gameState.currentLocation)
@@ -752,6 +695,8 @@ export default function Home() {
           gameState={gameState}
           onLocationAction={handleLocationAction}
           onProgressComplete={handleProgressComplete}
+          onActionStart={handleActionStart}
+          onToiletActionCompleteRedirect={handleToiletActionCompleteRedirect} // Pass the new prop
         />
       )
     }
@@ -763,7 +708,8 @@ export default function Home() {
           shopItems={gameData.shopItems}
           onLocationAction={handleLocationAction}
           onProgressComplete={handleProgressComplete}
-          onActionStart={handleActionStart} // Pass the new prop
+          onActionStart={handleActionStart}
+          onSmokingCompleteRedirect={handleSmokingCompleteRedirect}
         />
       )
     }
@@ -782,38 +728,24 @@ export default function Home() {
             workProgress={workProgress}
             onUseConsumable={handleUseConsumable}
             setActiveTab={setActiveTab}
-            onNavigateToLocation={handleNavigateToLocation} // Pass the new prop
+            onNavigateToLocation={handleNavigateToLocation}
           />
         )
       case TabType.Tasks:
-        return <TasksTab gameState={gameState} onWork={handleWork} onClaimQuest={handleClaimDailyQuest} />
+        return <TasksTab gameState={gameState} onWork={handleWork} onClaimQuestReward={handleClaimDailyQuest} />
       case TabType.Lunch:
         return <LunchTab gameState={gameState} onLunch={handleLunch} />
       case TabType.Shop:
         return <ShopTab gameState={gameState} onBuyItem={handleBuyItem} />
       case TabType.Character:
-        return (
-          <CharacterTab
-            gameState={gameState}
-            onPlayerNameChange={handlePlayerNameChange}
-            playerRank={getLevelRank(gameState.level)}
-            playerGrade={calculatePlayerGrade(gameState.stats.productivity, gameState.stats.burnout)}
-          />
-        )
+        return <CharacterTab gameState={gameState} onUpdatePlayerName={handlePlayerNameChange} />
       case TabType.SeaTalk:
-        return (
-          <SeaTalkTab
-            gameState={gameState}
-            onSendMessage={handleSendMessage}
-            generateSeaTalkMessage={generateSeaTalkMessage}
-            playerName={gameState.playerName}
-          />
-        )
+        return <SeaTalkTab gameState={gameState} onSendMessage={handleSendMessage} />
       case TabType.Navigate:
         return <NavigateTab onNavigate={handleNavigate} locations={gameData.locations} gameState={gameState} />
       case TabType.Portal:
         return (
-          <PortalTab gameState={gameState} setGameState={setGameState} onProgressComplete={handleProgressComplete} />
+          <PortalTab gameState={gameState} onPortalAction={() => {}} /> // Placeholder for onPortalAction
         )
       default:
         return (
@@ -828,7 +760,7 @@ export default function Home() {
             workProgress={workProgress}
             onUseConsumable={handleUseConsumable}
             setActiveTab={setActiveTab}
-            onNavigateToLocation={handleNavigateToLocation} // Pass the new prop
+            onNavigateToLocation={handleNavigateToLocation}
           />
         )
     }
@@ -841,11 +773,12 @@ export default function Home() {
     handleNavigate,
     handleClaimDailyQuest,
     handleSendMessage,
-    handleRandomEventChoice,
     handlePlayerNameChange,
     handleLocationAction,
     handleProgressComplete,
-    handleActionStart, // Added dependency
+    handleActionStart,
+    handleSmokingCompleteRedirect,
+    handleToiletActionCompleteRedirect, // Added dependency
     isWorking,
     workingTaskId,
     workProgress,
@@ -857,40 +790,25 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen w-full max-w-md mx-auto bg-gray-100 dark:bg-gray-900 font-sans">
       <GameHeader gameState={gameState} currentWeather={gameState.currentWeather} />
-
       <main className="flex-1 overflow-auto bg-white dark:bg-gray-800 shadow-inner relative pb-24">
         {renderTabContent()}
-        {internalThought && (
-          <InternalThoughtPopup message={internalThought} onDismiss={() => setInternalThought(null)} />
-        )}
+        {internalThought && <InternalThoughtPopup message={internalThought} />}
       </main>
-
-      <BottomNavigation
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        tabs={gameData.bottomNavigationTabs}
-        gameState={gameState}
-        // Removed: disabled={isGamePaused}
-      />
-
+      <BottomNavigation activeTab={activeTab} setActiveTab={setActiveTab} tabs={gameData.bottomNavigationTabs} />
       {showLunchReminder && (
         <LunchReminderModal
           onClose={() => {
             setShowLunchReminder(false)
-            setIsGamePaused(false)
           }}
-          onNavigateToLunch={() => {
+          onGoToLunch={() => {
+            // Renamed from onNavigateToLunch to match component prop
             setActiveTab(TabType.Lunch)
             setShowLunchReminder(false)
-            setIsGamePaused(false)
           }}
         />
       )}
-
-      {showOvertimePrompt && <OvertimePromptModal onDecide={handleOvertimeDecision} />}
-
-      {showSleepScreen && <SleepScreen onSleep={handleSleep} />}
-
+      {showOvertimePrompt && <OvertimePromptModal onDecision={handleOvertimeDecision} />}
+      {showSleepScreen && <SleepScreen countdown={30} />} {/* Pass a default countdown value */}
       {showRandomEvent && currentRandomEvent && (
         <RandomEventModal event={currentRandomEvent} onChoice={handleRandomEventChoice} />
       )}

@@ -3,15 +3,73 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Progress } from "@/components/ui/progress"
 import type { GameState } from "@/types/game"
 import { TableIcon as Toilet } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
 
 interface ToiletLocationProps {
   gameState: GameState
   onLocationAction: (actionId: string) => void
+  onActionStart: () => void // Keep this prop, but its implementation in page.tsx will no longer pause time
+  onToiletActionCompleteRedirect: () => void
 }
 
-export function ToiletLocation({ gameState, onLocationAction }: ToiletLocationProps) {
+export function ToiletLocation({
+  gameState,
+  onLocationAction,
+  onActionStart,
+  onToiletActionCompleteRedirect,
+}: ToiletLocationProps) {
+  const [actionProgress, setActionProgress] = useState(0)
+  const [isActionInProgress, setIsActionInProgress] = useState(false)
+  const [currentActionId, setCurrentActionId] = useState<string | null>(null)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  const actionDuration = 10000 // 10 seconds for the progress bar
+
+  useEffect(() => {
+    if (isActionInProgress) {
+      onActionStart() // Call this, but it won't pause time anymore
+      setActionProgress(0) // Reset progress when a new action starts
+      const startTime = Date.now()
+      intervalRef.current = setInterval(() => {
+        const elapsedTime = Date.now() - startTime
+        const progress = Math.min(100, (elapsedTime / actionDuration) * 100)
+        setActionProgress(progress)
+
+        if (progress >= 100) {
+          clearInterval(intervalRef.current!)
+          intervalRef.current = null
+          setIsActionInProgress(false)
+          if (currentActionId) {
+            onLocationAction(currentActionId) // Perform the action after progress completes
+          }
+          setCurrentActionId(null)
+          onToiletActionCompleteRedirect()
+        }
+      }, 100)
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [isActionInProgress, currentActionId, onLocationAction, onActionStart, onToiletActionCompleteRedirect])
+
+  const handleActionClick = (actionId: string) => {
+    if (!isActionInProgress) {
+      setCurrentActionId(actionId)
+      setIsActionInProgress(true)
+    }
+  }
+
   const actions = [
     {
       id: "do-business",
@@ -80,12 +138,19 @@ export function ToiletLocation({ gameState, onLocationAction }: ToiletLocationPr
                         )}
                       </div>
                       <Button
-                        onClick={() => onLocationAction(action.id)}
+                        onClick={() => handleActionClick(action.id)}
                         size="sm"
                         className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+                        disabled={isActionInProgress}
                       >
                         {action.name}
                       </Button>
+                      {isActionInProgress && currentActionId === action.id && (
+                        <div className="w-full mt-2">
+                          <Progress value={actionProgress} className="h-2 bg-gray-200 [&>*]:bg-green-500" />
+                          <p className="text-xs text-gray-500 mt-1">{Math.round(actionProgress)}% Complete</p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}

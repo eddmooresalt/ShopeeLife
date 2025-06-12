@@ -1,13 +1,81 @@
 import type React from "react"
+
 export enum TabType {
   Office = "office",
   Tasks = "tasks",
   Lunch = "lunch",
   Shop = "shop",
   Character = "character",
-  SeaTalk = "seaTalk",
+  SeaTalk = "seatalk",
   Navigate = "navigate",
-  Portal = "portal", // Added Portal tab type
+  Portal = "portal",
+}
+
+export interface GameState {
+  gameTime: number // Total minutes passed since game start
+  day: number // Current game day
+  shopeeCoins: number
+  exp: number
+  level: number
+  stats: {
+    energy: number // 0-100
+    productivity: number // 0-100
+    burnout: number // 0-100
+  }
+  tasks: Task[]
+  dailyQuests: DailyQuest[]
+  lastQuestResetDay: number // To track when quests were last reset
+  hasEatenLunch: boolean
+  lunchItemEatenId: string | null
+  hasClaimedDailyBonus: boolean
+  hasShownLunchReminder: boolean
+  currentLocation: string // ID of the current location
+  currentWeather: WeatherCondition
+  seaTalkMessages: SeaTalkMessage[]
+  playerName: string
+  consumablesInventory: ConsumableInventoryItem[]
+  shopItems: ShopItem[] // All shop items, including bought status
+  wardrobe: string[] // Array of item IDs the player owns for wardrobe
+  isSleeping: boolean // New state to indicate if player is sleeping
+  overtime: {
+    promptShown: boolean // Has the overtime prompt been shown today?
+    inOvertime: boolean // Is the player currently working overtime?
+  }
+  // Temporary flags for triggering UI effects from gameUtils
+  _triggerLunchReminder?: boolean
+  _triggerOvertimePrompt?: boolean
+  _triggerSleepScreen?: boolean
+  _triggerRandomEvent?: boolean
+  _currentRandomEvent?: RandomEvent | null
+  _internalThoughtQueue?: string[] // Queue for multiple thoughts
+}
+
+export interface Task {
+  id: string
+  name: string
+  description: string
+  targetProgress: number
+  progress: number
+  isCompleted: boolean
+  rewardExp: number
+  rewardCoins: number
+  energyCost: number
+  burnoutEffect?: number // Optional: how much burnout this task causes
+}
+
+export interface LunchLocation {
+  id: string
+  name: string
+  description: string
+  image: string // Path to image
+}
+
+export interface LunchItem {
+  id: string
+  name: string
+  price: number
+  energyGain: number
+  image: string // Path to image
 }
 
 export enum QuestType {
@@ -15,119 +83,9 @@ export enum QuestType {
   Navigate = "navigate",
   Lunch = "lunch",
   Shop = "shop",
+  SeaTalk = "seatalk",
   Stat = "stat",
-  SeaTalk = "seaTalk",
-  Wardrobe = "wardrobe",
-}
-
-export interface Task {
-  id: string
-  name: string
-  description: string
-  emoji: string // Added emoji field
-  progress: number
-  targetProgress: number
-  rewardExp: number
-  rewardCoins: number
-  energyCost: number
-  isCompleted: boolean
-  burnoutEffect?: number // New: Burnout effect on completion (positive values increase burnout)
-}
-
-export interface LunchLocation {
-  id: string
-  name: string
-  emoji: string
-}
-
-export interface LunchItem {
-  id: string
-  name: string
-  emoji: string
-  price: number
-  energyGain: number
-}
-
-export interface ShopItem {
-  id: string
-  name: string
-  description: string
-  emoji: string
-  price: number
-  type: "consumable" | "equipment" | "wardrobe"
-  effect?: {
-    energy?: number
-    productivity?: number
-    burnout?: number // Burnout effect (negative values reduce burnout)
-    workEfficiency?: number // e.g., 0.1 for 10% boost
-    exp?: number // Added exp effect for consumables
-    shopeeCoins?: number // Added shopeeCoins effect for consumables
-  }
-  isBought: boolean
-}
-
-export interface ConsumableInventoryItem {
-  itemId: string
-  quantity: number
-}
-
-export interface BottomNavigationTab {
-  id: TabType
-  name: string
-  icon: string
-}
-
-export interface LocationType {
-  id: string
-  name: string
-  emoji: string
-  description: string
-  tabType: TabType // The tab that this location primarily represents
-}
-
-export interface RandomEventChoice {
-  id: string
-  text: string
-  result: string
-  effect?: {
-    exp?: number
-    shopeeCoins?: number
-    energy?: number
-    productivity?: number
-    burnout?: number // Burnout effect (negative values reduce burnout)
-  }
-}
-
-export interface RandomEvent {
-  id: string
-  title: string
-  description: string
-  emoji: string // Added emoji field for contextual display
-  choices: RandomEventChoice[]
-}
-
-export interface SeaTalkMessage {
-  id: string
-  sender: string // "user" or NPC name
-  content: string
-  timestamp: number // Game time in minutes
-}
-
-export interface SeaTalkMessageTemplate {
-  sender: string
-  content: string
-  timestampOffset: number // Offset from game start or previous message
-  tone:
-    | "professional"
-    | "jovial"
-    | "sarcastic"
-    | "sad"
-    | "angry"
-    | "anxious"
-    | "casual"
-    | "flirty"
-    | "happy"
-    | "determined"
+  Wardrobe = "wardrobe", // New quest type for wardrobe items
 }
 
 export interface DailyQuest {
@@ -136,8 +94,8 @@ export interface DailyQuest {
   description: string
   isCompleted: boolean
   isClaimed: boolean
-  currentProgress: number
-  targetValue?: number // e.g., target stat level, number of messages
+  currentProgress?: number // For quests that require multiple actions (e.g., send 3 messages)
+  targetValue?: number // The target for currentProgress or stat value
   rewardExp: number
   rewardCoins: number
   criteria?: {
@@ -150,61 +108,92 @@ export interface DailyQuest {
   }
 }
 
+export type WeatherConditionType =
+  | "Sunny"
+  | "Cloudy"
+  | "Rainy"
+  | "Windy"
+  | "Thunderstorm"
+  | "Sunrise"
+  | "Sunset"
+  | "Night Time"
+
 export interface WeatherCondition {
-  type: "Sunny" | "Cloudy" | "Rainy" | "Windy" | "Thunderstorm" | "Sunrise" | "Sunset" | "Night Time"
+  type: WeatherConditionType
   description: string
 }
 
-export interface GameState {
-  gameTime: number // In minutes from game start (e.g., 0 = 9:00 AM)
-  exp: number
-  level: number
-  shopeeCoins: number
-  stats: {
-    energy: number
-    productivity: number
-    burnout: number // Burnout stat (lower is better)
+export interface SeaTalkMessageTemplate {
+  id: string
+  sender: string
+  content: string
+  // Add criteria for when this message should appear (e.g., after certain quest, time of day)
+}
+
+export interface SeaTalkMessage {
+  id: string
+  sender: string
+  content: string
+  timestamp: number // Game time in minutes when message was sent
+}
+
+export interface LocationType {
+  id: string
+  name: string
+  description: string
+  tabType: TabType // The tab associated with this location
+  image?: string // Optional image for the location
+  requiredItem?: {
+    itemId: string // ID of the item required to enter
+    message: string // Message to display if item is missing
   }
-  tasks: Task[]
-  lunchLocations: LunchLocation[]
-  lunchItems: LunchItem[]
-  shopItems: ShopItem[]
-  wardrobe: string[] // Array of item IDs in wardrobe
-  consumablesInventory: ConsumableInventoryItem[] // Changed to track quantity
-  hasEatenLunch: boolean
-  lunchItemEatenId: string | null
-  seaTalkMessages: SeaTalkMessage[]
-  lastQuestResetDay: number // To track when daily quests were last reset
-  dailyQuests: DailyQuest[]
-  hasClaimedDailyBonus: boolean // To prevent claiming bonus multiple times per day
-  hasShownLunchReminder: boolean // To prevent showing lunch reminder multiple times per day
-  currentWeather: WeatherCondition
-  playerName: string // New: Player's customizable name
 }
 
-export interface PortalActionEffect {
-  exp?: number
-  shopeeCoins?: number
-  energy?: number
-  productivity?: number
-  burnout?: number
-}
+export type ShopItemType = "consumable" | "equipment" | "wardrobe"
 
-export interface PortalAction {
+export interface ShopItem {
   id: string
   name: string
   description: string
-  effect: PortalActionEffect
-  cost: number
-  duration: number // Duration in seconds for the progress bar
+  price: number
+  type: ShopItemType
+  image: string // Path to image
+  isBought?: boolean // Only for equipment/wardrobe that are one-time purchases
+  effect?: {
+    energy?: number
+    productivity?: number
+    burnout?: number
+    workEfficiency?: number // e.g., for equipment
+    exp?: number // Consumables can give instant EXP
+    shopeeCoins?: number // Consumables can give instant coins
+  }
 }
 
-export interface PortalCategory {
+export interface ConsumableInventoryItem {
+  itemId: string // Refers to ShopItem.id
+  quantity: number
+}
+
+export interface RandomEvent {
   id: string
-  name: string
-  emoji: string
-  icon: React.ElementType
+  title: string
   description: string
-  cooldown: number // in game minutes
-  actions: PortalAction[]
+  choices: {
+    id: string
+    text: string
+    result: string // Message displayed after choice
+    effect?: {
+      energy?: number
+      productivity?: number
+      burnout?: number
+      exp?: number
+      shopeeCoins?: number
+    }
+  }[]
+}
+
+export interface BottomNavigationTab {
+  id: TabType
+  name: string
+  icon: React.ElementType // Using React.ElementType for Lucide icons
 }

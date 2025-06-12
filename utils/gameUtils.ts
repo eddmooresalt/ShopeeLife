@@ -69,6 +69,8 @@ export const loadGame = (): GameState | undefined => {
       consumablesInventory: Array.isArray(loadedState.consumablesInventory)
         ? loadedState.consumablesInventory
         : initialGameState.consumablesInventory,
+      isSleeping: loadedState.isSleeping ?? initialGameState.isSleeping,
+      overtime: loadedState.overtime ?? initialGameState.overtime,
     }
 
     return mergedState
@@ -454,30 +456,6 @@ export function calculatePlayerGrade(productivity: number, burnout: number): str
 }
 
 /**
- * Determines the player's level rank based on their current level.
- * @param level Player's current level
- * @returns A string representing the player's rank.
- */
-export function getLevelRank(level: number): string {
-  if (level < 5) return "Associate"
-  if (level < 10) return "Junior Specialist"
-  if (level < 15) return "Specialist"
-  if (level < 20) return "Senior Specialist"
-  if (level < 25) return "Team Lead"
-  if (level < 30) return "Assistant Manager"
-  if (level < 35) return "Manager"
-  if (level < 40) return "Senior Manager"
-  if (level < 45) return "Associate Director"
-  if (level < 50) return "Director"
-  if (level < 60) return "Senior Director"
-  if (level < 70) return "Vice President"
-  if (level < 80) return "Senior Vice President"
-  if (level < 90) return "Executive Vice President"
-  if (level < 100) return "Chief Officer"
-  return "Legend" // For level 100 and above
-}
-
-/**
  * Performs the smoking action, reducing cigarette count and applying effects.
  * @param gameState Current game state
  * @param cigaretteItemId The ID of the cigarette item (e.g., "marlboro-cigarettes")
@@ -520,4 +498,100 @@ export function performSmokingAction(
   }.`
 
   return { updatedState, internalThought }
+}
+
+/**
+ * Processes a single game tick, updating game state based on time progression and events.
+ * @param prevGameState The previous game state.
+ * @param gameData All static game data (tasks, locations, etc.).
+ * @returns The updated game state.
+ */
+export const processGameTick = (
+  prevGameState: GameState,
+  gameData: {
+    tasks: Task[]
+    locations: LocationType[]
+    lunchItems: LunchItem[]
+    shopItems: ShopItem[]
+    seaTalkMessages: SeaTalkMessageTemplate[]
+    randomEvents: RandomEvent[]
+  },
+): GameState => {
+  let updatedState = { ...prevGameState }
+  const newGameTime = prevGameState.gameTime + 1 // Advance by 1 minute
+  const newCurrentDay = getGameDay(newGameTime)
+  const newCurrentHour = Math.floor(newGameTime / 60) % 24
+
+  updatedState.gameTime = newGameTime
+  updatedState._internalThoughtQueue = [] // Clear queue for this tick
+
+  // Level up logic
+  const expNeededForNextLevel = updatedState.level * 100 // Example: 100, 200, 300...
+  if (updatedState.exp >= expNeededForNextLevel) {
+    updatedState.level += 1
+    updatedState.exp -= expNeededForNextLevel // Carry over excess EXP
+    updatedState._internalThoughtQueue.push(`Congratulations! You reached Level ${updatedState.level}!`)
+  }
+
+  // Daily reset logic
+  if (newCurrentDay > prevGameState.lastQuestResetDay) {
+    const newDailyQuests = generateDailyQuests(newCurrentDay, gameData)
+    updatedState = {
+      ...updatedState,
+      tasks: updatedState.tasks.map((task) => ({ ...task, progress: 0, isCompleted: false })), // Reset tasks
+      hasEatenLunch: false,
+      lunchItemEatenId: null,
+      dailyQuests: newDailyQuests,
+      lastQuestResetDay: newCurrentDay,
+      hasClaimedDailyBonus: false,
+      hasShownLunchReminder: false,
+      overtime: { inOvertime: false, promptShown: false }, // Reset overtime for new day
+      day: newCurrentDay, // Update the day
+    }
+    updatedState._internalThoughtQueue.push(`A new day begins! Day ${newCurrentDay}. New daily quests available!`)
+  }
+
+  // Lunch reminder logic (12:00 PM)
+  if (newCurrentHour === 12 && !prevGameState.hasShownLunchReminder) {
+    updatedState.hasShownLunchReminder = true // Mark as shown to prevent re-trigger
+    updatedState._triggerLunchReminder = true // Flag for page.tsx
+  }
+
+  // End of day / Overtime prompt (6:00 PM)
+  if (newCurrentHour === 18 && newGameTime % 60 === 0 && !prevGameState.overtime.promptShown) {
+    updatedState.overtime = { ...updatedState.overtime, promptShown: true } // Mark as shown
+    updatedState._triggerOvertimePrompt = true // Flag for page.tsx
+  }
+
+  // Sleep screen (10:00 PM)
+  if (newCurrentHour === 22 && newGameTime % 60 === 0 && !prevGameState.isSleeping) {
+    updatedState._triggerSleepScreen = true // Flag for page.tsx
+  }
+
+  // Random event trigger (every 2 game hours, 10% chance, AFTER 2 PM)
+  if (
+    newGameTime % 120 === 0 && // Every 2 game hours
+    Math.random() < 0.1 && // 10% chance
+    newCurrentHour >= 14 && // Only after 2 PM (14:00)
+    !prevGameState._triggerRandomEvent && // Prevent re-trigger if already flagged
+    gameData.randomEvents.length > 0
+  ) {
+    const randomEvent = gameData.randomEvents[Math.floor(Math.random() * gameData.randomEvents.length)]
+    updatedState._triggerRandomEvent = true // Flag for page.tsx
+    updatedState._currentRandomEvent = randomEvent // Pass the event data
+  }
+
+  // Update weather
+  updatedState.currentWeather = getWeather(newGameTime)
+
+  return updatedState
+}
+
+// Add the getLevelRank function to the end of the file, ensuring it's exported.
+
+export function getLevelRank(level: number): string {
+  if (level >= 50) return "Director"
+  if (level >= 30) return "Manager"
+  if (level >= 10) return "Senior Associate"
+  return "Associate"
 }

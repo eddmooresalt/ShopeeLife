@@ -254,6 +254,7 @@ export function PortalTab({ gameState, onPortalAction }: PortalTabProps) {
 
         if (newProgress >= 100) {
           clearInterval(actionIntervalRef.current!)
+          actionIntervalRef.current = null
           onPortalAction(activeAction.portalId, activeAction.actionId)
           setActiveAction(null)
         }

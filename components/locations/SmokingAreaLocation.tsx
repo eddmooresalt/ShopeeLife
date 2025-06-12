@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Progress } from "@/components/ui/progress" // Import Progress component
+import { Progress } from "@/components/ui/progress"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import type { GameState, ShopItem } from "@/types/game"
 import { Cigarette } from "lucide-react"
@@ -11,10 +11,11 @@ import { useState, useEffect } from "react"
 
 interface SmokingAreaLocationProps {
   gameState: GameState
-  shopItems: ShopItem[] // Pass shopItems to get effect details
-  onLocationAction: (actionId: string, effect?: any) => void // Modified to pass effect
-  onProgressComplete: (internalThought: string) => void // New prop for internal thought
-  onActionStart: () => void // New prop to signal action start
+  shopItems: ShopItem[]
+  onLocationAction: (actionId: string, effect?: any) => void
+  onProgressComplete: (internalThought: string) => void
+  onActionStart: () => void // Keep this prop, but its implementation in page.tsx will no longer pause time
+  onSmokingCompleteRedirect: () => void
 }
 
 export function SmokingAreaLocation({
@@ -22,7 +23,8 @@ export function SmokingAreaLocation({
   shopItems,
   onLocationAction,
   onProgressComplete,
-  onActionStart, // Destructure new prop
+  onActionStart,
+  onSmokingCompleteRedirect,
 }: SmokingAreaLocationProps) {
   const CIGARETTE_ITEM_ID = "marlboro-cigarettes"
   const SMOKING_DURATION_SECONDS = 10
@@ -35,47 +37,39 @@ export function SmokingAreaLocation({
   const [isSmoking, setIsSmoking] = useState(false)
   const [internalThought, setInternalThought] = useState<string | null>(null)
 
-  // New useEffect to ensure game is unpaused when entering this location
   useEffect(() => {
-    // When this component mounts, ensure the game is unpaused
-    // This handles cases where isGamePaused might be true from a previous state
-    // (e.g., a modal closed right before navigating here, or a lingering pause)
-    onProgressComplete("You entered the Smoking Area.") // Use this to unpause and set a thought
-    // Note: onProgressComplete also sets isGamePaused(false)
-
-    // No cleanup needed here, as onProgressComplete is called on mount
-    // and the smoking action itself will manage pause/unpause.
-  }, [onProgressComplete]) // Depend on onProgressComplete to avoid stale closures
+    // This initial thought is fine, it doesn't pause time
+    onProgressComplete("You entered the Smoking Area.")
+  }, [onProgressComplete])
 
   useEffect(() => {
     let timer: NodeJS.Timeout
     if (isSmoking && smokingProgress < 100) {
       timer = setInterval(() => {
         setSmokingProgress((prev) => {
-          const newProgress = prev + 100 / (SMOKING_DURATION_SECONDS * 10) // Update every 100ms
+          const newProgress = prev + 100 / (SMOKING_DURATION_SECONDS * 10)
           if (newProgress >= 100) {
             clearInterval(timer)
             setIsSmoking(false)
-            setSmokingProgress(0) // Reset progress bar
-            // Trigger the actual action and get internal thought
+            setSmokingProgress(0)
             onLocationAction("smoke-cigarettes", cigaretteShopItem?.effect)
             onProgressComplete("You finished your cigarette. Feeling a bit more relaxed.")
+            onSmokingCompleteRedirect()
             return 100
           }
           return newProgress
         })
       }, 100)
     } else if (!isSmoking && smokingProgress === 100) {
-      // Reset progress bar after completion if not already reset
       setSmokingProgress(0)
     }
 
     return () => clearInterval(timer)
-  }, [isSmoking, smokingProgress, onLocationAction, onProgressComplete, cigaretteShopItem])
+  }, [isSmoking, smokingProgress, onLocationAction, onProgressComplete, cigaretteShopItem, onSmokingCompleteRedirect])
 
   const handleSmoke = () => {
     if (cigaretteCount > 0 && !isSmoking) {
-      onActionStart() // Signal to parent that an action is starting (to pause game)
+      onActionStart() // Call this, but it won't pause time anymore
       setIsSmoking(true)
       setSmokingProgress(0)
       setInternalThought("You light up a cigarette...")

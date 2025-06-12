@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 
 interface SleepScreenProps {
-  countdown: number
+  countdown: number // Keep countdown for visual effect, even if time isn't paused
 }
 
 export function SleepScreen({ countdown }: SleepScreenProps) {

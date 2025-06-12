@@ -905,13 +905,26 @@ export default function Home() {
     [updateGame, toast],
   )
 
+  // Enhanced tab switching function that handles location navigation
+  const handleSetActiveTab = useCallback(
+    (tab: TabType) => {
+      // If we're currently in a location, exit the location first
+      if (currentLocation) {
+        setCurrentLocation(null)
+      }
+      // Then set the active tab
+      setActiveTab(tab)
+    },
+    [currentLocation],
+  )
+
   const CurrentTabComponent = TabContent[activeTab]
 
   return (
     <div className="relative flex flex-col h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-50">
       <GameHeader gameState={gameState} currentWeather={currentWeather} />
 
-      <main className="flex-1 overflow-hidden p-2 pb-16">
+      <main className="flex-1 overflow-hidden p-2">
         {" "}
         {/* Added pb-16 for bottom nav */}
         {isNavigating ? (
@@ -952,7 +965,7 @@ export default function Home() {
 
       <BottomNavigation
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleSetActiveTab}
         tabs={staticGameData.bottomNavigationTabs}
         disabled={isNavigating || isWorking || showRandomEvent || showLunchReminder}
       />
@@ -975,12 +988,12 @@ export default function Home() {
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
           <Card className="w-full max-w-md text-center">
             <CardHeader>
-              <CardTitle className="text-3xl text-white">Enjoying Lunch... 🍽️</CardTitle>
+              <CardTitle className="text-3xl text-gray-900">Enjoying Lunch... 🍽️</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-white text-lg">Taking a well-deserved break</p>
+              <p className="text-gray-800 text-lg">Taking a well-deserved break</p>
               <Progress value={lunchProgress} className="w-full h-4 bg-gray-600 [&>*]:bg-orange-500" />
-              <p className="text-white text-sm">{Math.round(lunchProgress)}% complete</p>
+              <p className="text-gray-700 text-sm">{Math.round(lunchProgress)}% complete</p>
               <p className="text-gray-300 text-xs">Please wait while you enjoy your meal...</p>
             </CardContent>
           </Card>

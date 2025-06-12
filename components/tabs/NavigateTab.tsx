@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import type { LocationType, GameState } from "@/types/game"
 import { useState } from "react"
-import { MapPin, Clock, Users, Zap } from "lucide-react"
+import { MapPin, Clock } from "lucide-react"
 
 interface NavigateTabProps {
   onNavigate: (location: LocationType) => void
@@ -16,6 +16,7 @@ interface NavigateTabProps {
 
 export function NavigateTab({ onNavigate, locations, gameState }: NavigateTabProps) {
   const [selectedFloor, setSelectedFloor] = useState<number>(1)
+  const [hoveredLocation, setHoveredLocation] = useState<string | null>(null)
 
   // Organize locations by floor
   const locationsByFloor = {
@@ -40,25 +41,50 @@ export function NavigateTab({ onNavigate, locations, gameState }: NavigateTabPro
     }
   }
 
+  const getLocationIcon = (locationId: string) => {
+    switch (locationId) {
+      case "office":
+        return <span className="text-3xl">💼</span>
+      case "gym":
+        return <span className="text-3xl">🏋️</span>
+      case "rooftop-garden":
+        return <span className="text-3xl">🌿</span>
+      case "meeting-room":
+        return <span className="text-3xl">👥</span>
+      case "pantry":
+        return <span className="text-3xl">☕</span>
+      case "hr-portal":
+        return <span className="text-3xl">📋</span>
+      case "it-helpdesk":
+        return <span className="text-3xl">💻</span>
+      default:
+        return <span className="text-3xl">📍</span>
+    }
+  }
+
   const getLocationStats = (locationId: string) => {
     switch (locationId) {
       case "office":
-        return { icon: Zap, stat: "Productivity", color: "text-blue-500" }
+        return { emoji: "⚡", stat: "Productivity", color: "text-blue-500" }
       case "gym":
-        return { icon: Zap, stat: "Energy", color: "text-red-500" }
+        return { emoji: "💪", stat: "Energy", color: "text-red-500" }
       case "rooftop-garden":
-        return { icon: Users, stat: "Wellness", color: "text-green-500" }
+        return { emoji: "🧘", stat: "Wellness", color: "text-green-500" }
       case "meeting-room":
-        return { icon: Users, stat: "Social", color: "text-purple-500" }
+        return { emoji: "🤝", stat: "Social", color: "text-purple-500" }
       case "pantry":
-        return { icon: Zap, stat: "Energy", color: "text-orange-500" }
+        return { emoji: "🍽️", stat: "Energy", color: "text-orange-500" }
+      case "hr-portal":
+        return { emoji: "👔", stat: "Support", color: "text-indigo-500" }
+      case "it-helpdesk":
+        return { emoji: "🔧", stat: "Tech", color: "text-yellow-500" }
       default:
-        return { icon: MapPin, stat: "Explore", color: "text-gray-500" }
+        return { emoji: "🗺️", stat: "Explore", color: "text-gray-500" }
     }
   }
 
   return (
-    <div className="h-[calc(100vh-140px)] flex flex-col bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-slate-800">
+    <div className="h-full flex flex-col bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-slate-800">
       {/* Header */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white p-6 shadow-xl flex-shrink-0">
         <div className="flex items-center space-x-3">
@@ -71,7 +97,7 @@ export function NavigateTab({ onNavigate, locations, gameState }: NavigateTabPro
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 pb-36">
           {/* Floor Selector */}
           <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
             <CardHeader className="pb-4">
@@ -109,6 +135,7 @@ export function NavigateTab({ onNavigate, locations, gameState }: NavigateTabPro
               const available = isLocationAvailable(location.id)
               const stats = getLocationStats(location.id)
               const StatIcon = stats.icon
+              const isHovered = hoveredLocation === location.id
 
               return (
                 <Card
@@ -119,21 +146,26 @@ export function NavigateTab({ onNavigate, locations, gameState }: NavigateTabPro
                       : "opacity-60 bg-gray-100 dark:bg-gray-800"
                   }`}
                   onClick={() => available && onNavigate(location)}
+                  onMouseEnter={() => setHoveredLocation(location.id)}
+                  onMouseLeave={() => setHoveredLocation(null)}
                 >
                   <CardContent className="p-6">
                     {/* Location Header */}
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center space-x-3">
-                        <div className="text-4xl group-hover:scale-110 transition-transform duration-200">
+                        <div className={`text-4xl transition-all duration-300 ${isHovered ? "scale-125" : ""}`}>
                           {location.emoji}
                         </div>
                         <div>
                           <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200">{location.name}</h3>
                           <div className="flex items-center space-x-1 text-sm">
-                            <StatIcon className={`w-4 h-4 ${stats.color}`} />
+                            <span className="text-lg">{stats.emoji}</span>
                             <span className={`font-medium ${stats.color}`}>{stats.stat}</span>
                           </div>
                         </div>
+                      </div>
+                      <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-full hover:scale-110 transition-transform duration-200">
+                        {getLocationIcon(location.id)}
                       </div>
                     </div>
 
@@ -174,13 +206,13 @@ export function NavigateTab({ onNavigate, locations, gameState }: NavigateTabPro
                     {/* Activity Preview */}
                     <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
                       <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {location.id === "office" && "📊 Productivity activities available"}
-                        {location.id === "gym" && "💪 Fitness & wellness activities"}
-                        {location.id === "rooftop-garden" && "🧘 Relaxation & mindfulness"}
-                        {location.id === "meeting-room" && "🤝 Team collaboration activities"}
-                        {location.id === "pantry" && "☕ Social & refreshment activities"}
-                        {location.id === "hr-portal" && "📋 HR services & support"}
-                        {location.id === "it-helpdesk" && "💻 Technical support & training"}
+                        {location.id === "office" && "📊 Productivity & work activities"}
+                        {location.id === "gym" && "🏃‍♂️ Fitness & wellness activities"}
+                        {location.id === "rooftop-garden" && "🌱 Relaxation & mindfulness"}
+                        {location.id === "meeting-room" && "💼 Team collaboration activities"}
+                        {location.id === "pantry" && "🥪 Social & refreshment activities"}
+                        {location.id === "hr-portal" && "📝 HR services & support"}
+                        {location.id === "it-helpdesk" && "🖥️ Technical support & training"}
                       </div>
                     </div>
                   </CardContent>

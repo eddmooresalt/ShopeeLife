@@ -266,7 +266,7 @@ export function PortalTab({ gameState, onPortalAction }: PortalTabProps) {
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-6">
+        <div className="p-6 pb-24">
           {!selectedPortal ? (
             /* Portal Grid */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

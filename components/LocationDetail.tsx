@@ -18,6 +18,8 @@ import { OfficeLocation } from "./locations/OfficeLocation"
 import { RooftopGardenLocation } from "./locations/RooftopGardenLocation"
 import { GymLocation } from "./locations/GymLocation"
 import { PantryLocation } from "./locations/PantryLocation"
+import { HRPortalLocation } from "./locations/HRPortalLocation"
+import { ITHelpdeskLocation } from "./locations/ITHelpdeskLocation"
 import { TabType } from "@/types/game"
 
 interface LocationDetailProps {
@@ -50,6 +52,8 @@ const CustomLocationComponents: Record<string, React.ComponentType<any>> = {
   "rooftop-garden": RooftopGardenLocation,
   gym: GymLocation,
   pantry: PantryLocation,
+  "hr-portal": HRPortalLocation,
+  "it-helpdesk": ITHelpdeskLocation,
 }
 
 export function LocationDetail({
@@ -69,7 +73,7 @@ export function LocationDetail({
   const CurrentLocationTabComponent = LocationTabContent[location.tabType]
 
   return (
-    <div className="p-4 space-y-4 h-full flex flex-col">
+    <div className="p-4 pt-4 space-y-4 h-[calc(100vh-80px)] flex flex-col">
       <Card className="flex-none border-0 shadow-lg bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-800 dark:to-blue-800">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <Button variant="ghost" size="icon" onClick={onBack} className="hover:bg-white/50">
@@ -87,7 +91,7 @@ export function LocationDetail({
         </CardContent>
       </Card>
 
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden pb-24">
         {CustomLocationComponent ? (
           <CustomLocationComponent
             gameState={gameState}

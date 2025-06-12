@@ -20,7 +20,7 @@ export function TasksTab({ gameState, onWork, isWorking, workingTaskId, workProg
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col">
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 pb-24">
           <Card className="shadow-lg">
             <CardHeader className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-t-lg">
               <CardTitle className="flex items-center space-x-2">

@@ -93,7 +93,7 @@ export function OfficeTab({
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col">
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 pb-20">
           {/* Welcome Section */}
           <Card className="bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 dark:from-orange-900/20 dark:via-amber-900/20 dark:to-yellow-900/20 border-orange-200 dark:border-orange-800 shadow-lg">
             <CardContent className="p-6">

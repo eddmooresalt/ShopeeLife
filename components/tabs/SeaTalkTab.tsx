@@ -47,7 +47,7 @@ export function SeaTalkTab({ gameState, onSendMessage }: SeaTalkTabProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col p-0 min-h-0">
-          <ScrollArea className="flex-1 p-4">
+          <ScrollArea className="flex-1 p-4 pb-24">
             <div className="space-y-3 min-h-[400px]">
               {gameState.seaTalkMessages.length === 0 ? (
                 <div className="flex items-center justify-center h-[400px]">

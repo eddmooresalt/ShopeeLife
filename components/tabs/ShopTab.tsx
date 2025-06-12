@@ -46,7 +46,7 @@ export function ShopTab({ gameState, onBuyItem }: ShopTabProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="h-full p-0">
-          <ScrollArea className="h-full p-4">
+          <ScrollArea className="h-full p-4 pb-24">
             {shopItems.length === 0 ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">

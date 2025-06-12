@@ -2,9 +2,12 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import type { GameState } from "@/types/game"
-import { Coffee, Users, Utensils, MessageCircle, Clock, Zap } from "lucide-react"
+import { Coffee, Utensils, Users, MessageSquare } from "lucide-react"
+import { formatGameTime } from "@/utils/gameUtils"
 import { useState, useEffect, useRef } from "react"
 
 interface PantryLocationProps {
@@ -20,79 +23,71 @@ export function PantryLocation({ gameState, onLocationAction }: PantryLocationPr
 
   const activities = [
     {
-      id: "coffee-chat",
-      name: "Coffee & Gossip",
-      description: "The real office news network happens here",
+      id: "coffee-break",
+      name: "Coffee Break",
+      description: "Enjoy a quick coffee to boost energy",
       icon: Coffee,
-      duration: 12, // 12 seconds
-      difficulty: "Easy",
-      effects: { energy: 10, social: 15, exp: 5 },
-      energyCost: 3,
+      duration: 5, // 5 seconds
+      effects: { energy: 15, productivity: 5 },
       thoughts: [
-        "Did you hear about the printer on floor 2? It's become sentient.",
-        "Apparently, someone microwaved fish again. The horror.",
-        "The coffee machine is making weird noises... should we be concerned?",
-        "I heard the CEO actually uses Comic Sans in their presentations.",
+        "This coffee is exactly what I needed!",
+        "I can feel the caffeine kicking in already.",
+        "One more cup and I'll be unstoppable!",
+        "The aroma alone is energizing.",
       ],
     },
     {
-      id: "microwave-mastery",
-      name: "Microwave Culinary Arts",
-      description: "Transform leftovers into... slightly warmer leftovers",
+      id: "snack-time",
+      name: "Grab a Snack",
+      description: "Have a quick snack to satisfy hunger",
       icon: Utensils,
-      duration: 18, // 18 seconds
-      difficulty: "Medium",
-      effects: { energy: 20, productivity: 5, social: 5 },
-      energyCost: 5,
-      thoughts: [
-        "Is 3 minutes too long for leftover pizza? Asking for a friend.",
-        "Why does everything smell like popcorn in here?",
-        "The microwave timer is broken, so I'm just guessing at this point.",
-        "I'm pretty sure this container is older than my career here.",
-      ],
-    },
-    {
-      id: "team-bonding",
-      name: "Impromptu Team Meeting",
-      description: "When the pantry becomes an unofficial conference room",
-      icon: Users,
-      duration: 25, // 25 seconds
-      difficulty: "Hard",
-      effects: { social: 25, productivity: 10, exp: 15 },
-      energyCost: 10,
-      thoughts: [
-        "How did a coffee break turn into a project planning session?",
-        "We're solving world hunger while waiting for the kettle to boil.",
-        "This is either the best idea ever or we need more caffeine.",
-        "I love how we're redesigning the entire system over instant noodles.",
-      ],
-    },
-    {
-      id: "snack-hunt",
-      name: "Emergency Snack Procurement",
-      description: "Raid the communal snack stash like a professional",
-      icon: MessageCircle,
       duration: 8, // 8 seconds
-      difficulty: "Easy",
-      effects: { energy: 15, burnout: -8 },
-      energyCost: 2,
+      effects: { energy: 10, hunger: -20 },
       thoughts: [
-        "Who ate all the good cookies and left only the healthy ones?",
-        "Is it socially acceptable to take the last donut? Asking for science.",
-        "These crackers expired in 2019... they're probably fine, right?",
-        "I'm not addicted to office snacks, I can quit anytime I want.",
+        "These snacks are delicious!",
+        "I needed this sugar boost.",
+        "I should bring my own healthy snacks tomorrow.",
+        "I hope nobody notices me taking extra cookies.",
+      ],
+    },
+    {
+      id: "water-cooler-chat",
+      name: "Water Cooler Chat",
+      description: "Socialize with colleagues",
+      icon: Users,
+      duration: 12, // 12 seconds
+      effects: { social: 20, burnout: -10, energy: 5 },
+      thoughts: [
+        "Did you hear about the new project?",
+        "Office gossip is the best part of the day!",
+        "I should get back to work soon...",
+        "It's good to connect with colleagues.",
+      ],
+    },
+    {
+      id: "team-lunch",
+      name: "Team Lunch",
+      description: "Have lunch with your team",
+      icon: MessageSquare,
+      duration: 15, // 15 seconds
+      effects: { social: 25, hunger: -30, exp: 10 },
+      thoughts: [
+        "Team bonding is so important!",
+        "The food tastes better with good company.",
+        "I'm learning so much about my colleagues.",
+        "This is a great break from work.",
       ],
     },
   ]
 
   const handleActivityStart = (activity: any) => {
-    if (gameState.stats.energy < activity.energyCost || activeActivity) return
+    if (activeActivity) return
 
     setActiveActivity(activity.id)
     setProgress(0)
     setInternalThought(activity.thoughts[Math.floor(Math.random() * activity.thoughts.length)])
 
-    const duration = activity.duration * 1000
+    const duration = activity.duration * 1000 // Convert to milliseconds
     const startTime = Date.now()
 
     timerRef.current = setInterval(() => {
@@ -100,9 +95,10 @@ export function PantryLocation({ gameState, onLocationAction }: PantryLocationPr
       const newProgress = Math.min(100, (elapsed / duration) * 100)
       setProgress(newProgress)
 
-      if (newProgress > 30 && newProgress < 35) {
+      // Add random thoughts during activity
+      if (newProgress > 25 && newProgress < 30) {
         setInternalThought(activity.thoughts[Math.floor(Math.random() * activity.thoughts.length)])
-      } else if (newProgress > 70 && newProgress < 75) {
+      } else if (newProgress > 60 && newProgress < 65) {
         setInternalThought(activity.thoughts[Math.floor(Math.random() * activity.thoughts.length)])
       }
 
@@ -110,8 +106,10 @@ export function PantryLocation({ gameState, onLocationAction }: PantryLocationPr
         if (timerRef.current) clearInterval(timerRef.current)
         setActiveActivity(null)
         setProgress(0)
-        setInternalThought("Mission accomplished! Time to return to the desk... eventually.")
+        setInternalThought("That was refreshing! Back to work now.")
         onLocationAction(activity.id)
+
+        // Clear thought after completion
         setTimeout(() => setInternalThought(null), 3000)
       }
     }, 100)
@@ -123,150 +121,126 @@ export function PantryLocation({ gameState, onLocationAction }: PantryLocationPr
     }
   }, [])
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "Easy":
-        return "bg-green-100 text-green-700 border-green-200"
-      case "Medium":
-        return "bg-yellow-100 text-yellow-700 border-yellow-200"
-      case "Hard":
-        return "bg-red-100 text-red-700 border-red-200"
-      default:
-        return "bg-gray-100 text-gray-700 border-gray-200"
-    }
-  }
-
   return (
-    <div className="space-y-6">
-      <Card className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <span className="text-2xl">☕</span>
-            <span>Office Pantry</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            The social hub of the office. Where caffeine meets conversation and microwaves meet their doom.
-          </p>
+    <div className="h-full flex flex-col">
+      <ScrollArea className="flex-1">
+        <div className="space-y-6 p-4 pb-28">
+          <Card className="bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <span className="text-2xl">☕</span>
+                <span>Office Pantry</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                Take a break and recharge with snacks, drinks, and casual conversations.
+              </p>
 
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-              <div className="text-2xl font-bold text-orange-600">{gameState.stats.energy}</div>
-              <div className="text-sm text-gray-500">Energy</div>
-            </div>
-            <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-              <div className="text-2xl font-bold text-purple-600">{gameState.stats.social || 50}</div>
-              <div className="text-sm text-gray-500">Social</div>
-            </div>
-            <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-              <div className="text-2xl font-bold text-red-600">{100 - gameState.stats.burnout}</div>
-              <div className="text-sm text-gray-500">Mood</div>
-            </div>
-          </div>
-
-          {internalThought && (
-            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 mb-4">
-              <div className="flex items-center space-x-2">
-                <span className="text-orange-600">💭</span>
-                <span className="text-sm italic text-orange-800 dark:text-orange-200">"{internalThought}"</span>
+              {/* Current Time */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                <Badge variant="outline">{formatGameTime(gameState.gameTime)}</Badge>
+                <Badge variant="secondary">Open 24/7</Badge>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {activities.map((activity) => {
-          const Icon = activity.icon
-          const canPerform = gameState.stats.energy >= activity.energyCost && !activeActivity
-          const isActive = activeActivity === activity.id
-
-          return (
-            <Card
-              key={activity.id}
-              className={`transition-all duration-200 border-0 shadow-lg ${
-                isActive
-                  ? "ring-2 ring-orange-500 bg-orange-50 dark:bg-orange-900/20"
-                  : canPerform
-                    ? "hover:shadow-xl hover:scale-105"
-                    : "opacity-50"
-              }`}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-start space-x-4">
-                  <div className="p-3 bg-orange-100 dark:bg-orange-900 rounded-lg">
-                    <Icon className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <h3 className="font-semibold text-lg">{activity.name}</h3>
-                      <span
-                        className={`text-xs px-2 py-1 rounded-full border ${getDifficultyColor(activity.difficulty)}`}
-                      >
-                        {activity.difficulty}
-                      </span>
-                    </div>
-
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{activity.description}</p>
-
-                    <div className="flex items-center space-x-4 text-xs text-gray-500 mb-4">
-                      <div className="flex items-center space-x-1">
-                        <Clock className="w-3 h-3" />
-                        <span>{activity.duration}s</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Zap className="w-3 h-3" />
-                        <span>{activity.energyCost} energy</span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1 mb-4">
-                      {Object.entries(activity.effects).map(([stat, value]) => (
-                        <span
-                          key={stat}
-                          className={`text-xs px-2 py-1 rounded ${
-                            value > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                          }`}
-                        >
-                          {value > 0 ? "+" : ""}
-                          {value} {stat}
-                        </span>
-                      ))}
-                    </div>
-
-                    {isActive && (
-                      <div className="mb-4">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>Progress</span>
-                          <span>{Math.round(progress)}%</span>
-                        </div>
-                        <Progress value={progress} className="h-2" />
-                      </div>
-                    )}
-
-                    <Button
-                      onClick={() => handleActivityStart(activity)}
-                      disabled={!canPerform}
-                      className={`w-full ${
-                        isActive
-                          ? "bg-orange-600 hover:bg-orange-700"
-                          : "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
-                      }`}
-                    >
-                      {isActive
-                        ? `In Progress... (${Math.round(progress)}%)`
-                        : !canPerform
-                          ? "Not Enough Energy"
-                          : "Start Activity"}
-                    </Button>
+              {/* Internal Thought */}
+              {internalThought && (
+                <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3 mb-4">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-orange-600">💭</span>
+                    <span className="text-sm italic text-orange-800 dark:text-orange-200">"{internalThought}"</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+              )}
+
+              {/* Pantry Stats */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
+                  <div className="text-lg font-bold text-orange-600">🍪</div>
+                  <div className="text-sm">Snacks Available</div>
+                </div>
+                <div className="text-center p-3 bg-white dark:bg-gray-800 rounded-lg">
+                  <div className="text-lg font-bold text-yellow-600">👥</div>
+                  <div className="text-sm">Colleagues Present</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {activities.map((activity) => {
+              const Icon = activity.icon
+              const isActive = activeActivity === activity.id
+              const canPerform = !activeActivity
+
+              return (
+                <Card
+                  key={activity.id}
+                  className={`transition-all duration-200 ${
+                    isActive
+                      ? "ring-2 ring-orange-500 bg-orange-50 dark:bg-orange-900/20"
+                      : !canPerform
+                        ? "opacity-50"
+                        : "hover:shadow-xl hover:scale-105"
+                  }`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="p-2 bg-orange-100 dark:bg-orange-900 rounded-lg">
+                        <Icon className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold mb-1">{activity.name}</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{activity.description}</p>
+                        <div className="text-xs text-gray-500 mb-3">Duration: {activity.duration}s</div>
+
+                        {/* Effects */}
+                        <div className="flex flex-wrap gap-1 mb-3">
+                          {Object.entries(activity.effects).map(([stat, value]) => (
+                            <span
+                              key={stat}
+                              className={`text-xs px-2 py-1 rounded ${
+                                value > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                              }`}
+                            >
+                              {value > 0 ? "+" : ""}
+                              {value} {stat}
+                            </span>
+                          ))}
+                        </div>
+
+                        {/* Progress Bar */}
+                        {isActive && (
+                          <div className="mb-3">
+                            <div className="flex justify-between text-sm mb-1">
+                              <span>Progress</span>
+                              <span>{Math.round(progress)}%</span>
+                            </div>
+                            <Progress value={progress} className="h-2" />
+                          </div>
+                        )}
+
+                        <Button
+                          onClick={() => handleActivityStart(activity)}
+                          disabled={!canPerform}
+                          className="w-full"
+                          size="sm"
+                        >
+                          {isActive
+                            ? `In progress... (${Math.round(progress)}%)`
+                            : !canPerform
+                              ? "Already Taking a Break"
+                              : "Start Activity"}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </div>
+      </ScrollArea>
     </div>
   )
 }

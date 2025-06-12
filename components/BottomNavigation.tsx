@@ -12,7 +12,7 @@ interface BottomNavigationProps {
 
 export function BottomNavigation({ activeTab, setActiveTab, tabs, disabled }: BottomNavigationProps) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-around p-2 shadow-lg z-50">
+    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-around p-2 shadow-lg z-[100]">
       {tabs.map((tab) => (
         <Button
           key={tab.id}

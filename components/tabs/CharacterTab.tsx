@@ -19,7 +19,7 @@ export function CharacterTab({ gameState }: CharacterTabProps) {
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col">
       <ScrollArea className="flex-1">
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 pb-24">
           <Card className="shadow-lg">
             <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-t-lg">
               <CardTitle className="flex items-center space-x-2">
